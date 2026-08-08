@@ -41,6 +41,18 @@ class RunPaths:
         return self.run_dir / "corpus_clustered.csv"
 
     @property
+    def screening_decisions_path(self) -> Path:
+        return self.run_dir / "screening_decisions.csv"
+
+    @property
+    def corpus_paper_path(self) -> Path:
+        return self.indicators_dir / "corpus_paper.csv"
+
+    @property
+    def screening_audit_path(self) -> Path:
+        return self.indicators_dir / "screening_audit.json"
+
+    @property
     def fetch_log_path(self) -> Path:
         return self.run_dir / "fetch_log.json"
 

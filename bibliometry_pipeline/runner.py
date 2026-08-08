@@ -22,6 +22,7 @@ _ORDERED_STAGE_NAMES = [
     "report-viz",
     "report-pdf",
     "tex-pdf",
+    "screening",
 ]
 
 
@@ -39,6 +40,7 @@ def _stage_modules() -> dict[str, str]:
         "report-viz": "report_viz",
         "report-pdf": "report_pdf",
         "tex-pdf": "tex_pdf",
+        "screening": "screening",
     }
 
 

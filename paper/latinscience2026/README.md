@@ -1,25 +1,41 @@
 # Latin.Science 2026 article workspace
 
-This directory is the source of truth for the new full-paper rewrite.
+This directory is the tracked source of truth for the full-paper rewrite. Large
+data and generated artifacts remain local under `runs/latin_science_2026/`.
 
-## Separation from legacy work
+## Current article direction
 
-The old broad run is frozen in `runs/academic_production_v14/` and documented under `archive/broad_ai_corpus_v14/`. Do not read root-level generated corpora, indicators or reports as inputs to this article.
+**Working title:** *From Generic AI to Named Models and Institutional
+Guardrails: A Bibliometric Map of AI in Scholarly Communication and Research
+Workflows, 2020–2026.*
 
-## Live locations
+The paper maps AI used **for scholarly communication and research workflows**:
+scientific writing, publishing, peer review, integrity, evidence-synthesis
+automation, and higher-education governance. It does not claim to map AI
+research generally, clinical AI, or education technology generally.
 
-| Material | Location | Version-control policy |
+## Directory map
+
+| Location | Purpose | Git policy |
 |---|---|---|
-| Protocol and manuscript source | `paper/latinscience2026/` | tracked |
-| Screening ledger and blinded ratings | `paper/latinscience2026/screening/`, `validation/` | local during review; release de-identified version later |
-| New pipeline output | `runs/latinscience2026_v1/` | local and ignored |
-| Full-paper plan | `NOTES/latin_science_full_paper_plan.md` | tracked |
+| `protocol.md` | frozen scope, questions and analysis commitments | tracked |
+| `CURRENT_DATA.md` | current facts, artifact map and data decisions | tracked |
+| `data/` | documentation for the local analytical dataset | tracked docs only |
+| `validation/` | validation procedure and returned-ratings conventions | tracked docs only during blind review |
+| `manuscript/` | paper source, figures selected for submission and references | tracked |
+| `development/` | rule-development/audit documentation | tracked |
+| `runs/latin_science_2026/` | screened corpus, scores, samples and outputs | local / ignored |
+| `archive/broad_ai_corpus_v14/` | frozen broad predecessor study | tracked manifest; data local |
 
-## Required records before writing results
+## Operating rules
 
-1. `protocol.md`: frozen question, hypotheses, sources, criteria and axis definitions.
-2. `screening/screening_decisions.csv`: a decision and reason for every borderline or excluded record.
-3. `validation/rubric.md` and a blinded ratings file from two independent raters.
-4. A run manifest identifying the corpus and code version used by each table and figure.
-
-No result enters the manuscript unless it can be regenerated from those records.
+1. Do not edit or move the v14 archive or current run artifacts merely to make
+   the tree look cleaner.
+2. The final analytical population is the 711 records with `decision=include`.
+   The eight `needs_review` records are excluded from every result until manually
+   adjudicated.
+3. Every manuscript table/figure must name its local input artifact and the run
+   date in its caption or supplementary manifest.
+4. Only code, protocol, manuscript source and lightweight documentation belong
+   on GitHub. Corpora, raw exports, ratings workbooks and PDFs stay local until
+   an intentional de-identified release is prepared.

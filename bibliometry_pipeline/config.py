@@ -146,6 +146,13 @@ RESEARCH_SEARCH_TERMS = [
     "citation management",
     "literature search assistance",
     "evidence synthesis",
+    # Evidence-synthesis automation (added per NOTES/screening_audit_report.md §3.5 —
+    # in-scope research activities and the largest false-negative source)
+    "abstract screening",
+    "study selection",
+    "reference screening",
+    "living systematic review",
+    "meta-analysis automation",
     # Research integrity & fraud detection
     "academic integrity",
     "research integrity",
@@ -153,6 +160,16 @@ RESEARCH_SEARCH_TERMS = [
     "paper mill detection",
     "retraction detection",
     "publication ethics",
+    # Scholarly-publishing / editorial-policy / AI-text detection (added per
+    # NOTES/screening_audit_report.md §3.5)
+    "editorial policy",
+    "publishing policy",
+    "author guidelines",
+    "predatory journal",
+    "ORCID",
+    "AI-text detection",
+    "AI-generated text detection",
+    "medical writing",
     # Research workflow tools
     "research workflow",
     # Removed high-noise / low-precision terms:
@@ -204,37 +221,100 @@ POSITIVE_SCOPE_RULES = {
         r"publicação científica|publicación científica)\b",
         re.IGNORECASE,
     ),
+    # v15 review (independent reviewers of 160 borderline papers): the
+    # `research_workflow + medical` conflicted group had only 2/50 in-scope
+    # papers. Bare "peer review" fired on clinical systematic-review methods
+    # boilerplate ("two independent reviewers screened articles"), and bare
+    # "literature search" fired on every SR's methods section ("literature
+    # search was performed in PubMed/Embase"). "peer review" is now anchored to
+    # scholarly/manuscript/editorial contexts or to AI/automation phrasing, and
+    # "literature search/screening" now requires an automation/AI/tool qualifier
+    # or a tool/service noun. Leading \b is kept; the trailing \b was dropped so
+    # the AI-qualified "peer review" fragment still catches "AI peer reviewer"
+    # and plural tool/service nouns (e.g. "research assistants") still match.
     "research_workflow": re.compile(
-        r"\b(?:peer review|reviewer comments|reference management|citation management|"
-        r"research workflow|literature search assistance|"
-        r"abstract screening|reference screening|study selection|"
-        r"evidence synthesis|literature search|scholarly communication|"
-        r"journal submission|research assistant|"
-        r"revisão por pares|revisión por pares|"
-        r"revisão sistemática|revisión sistemática|"
-        r"gestão de referências|gestión de referencias|"
-        r"síntese de evidências|síntesis de evidencia|"
-        r"fluxo de trabalho de pesquisa|flujo de trabajo de investigación|"
-        r"assistente de pesquisa|asistente de investigación|"
-        # Require AI/automated qualifier OR tool-noun suffix to avoid false positives
-        # from papers that merely describe doing a literature review as a method.
-        r"(?:automated|AI.{0,5}assisted|LLM.{0,5}powered|AI.{0,5}driven) literature review|"
-        r"literature review (?:system|tool|software|platform|automation|assistant|support|services?)|"
-        r"systematic literature review)\b",
-        re.IGNORECASE,
+        r"\b(?:"
+        # Anchored "peer review": scholarly / manuscript / editorial contexts or
+        # an AI/automation qualifier — fires on "automated peer review", "AI peer
+        # reviewer", "LLM-assisted peer review", not "reviewers screened images".
+        r"peer\ review\ (?:process|quality|assistance|automation|generation|system|workflow|of\ manuscripts?|of\ articles?|of\ scientific|for\ scholarly|for\ academic)|"
+        r"(?:automated|AI|LLM|machine|deep|neural).{0,30}peer\ review|"
+        r"peer\ review.{0,30}(?:automation|AI|LLM|tool|system|software|platform)|"
+        # "reviewer comments" is peer-review feedback, not SR screening.
+        r"reviewer\ comments|"
+        r"reference\ management|citation\ management|"
+        r"research\ workflow|scholarly\ communication|"
+        r"journal\ submission|research\ assistant|"
+        # Literature search/screening now requires an automation/AI/tool qualifier
+        # OR a tool/service noun (no bare "literature search").
+        r"(?:automated|AI.{0,5}(?:assisted|driven|powered)|LLM.{0,5}powered|tool.{0,10})\s+literature\ (?:search|screening)|"
+        r"literature\ search\ (?:system|tool|software|platform|assistant|support|services?)|"
+        # Literature-review-as-tool/service and qualified systematic review.
+        r"literature\ review\ (?:system|tool|software|platform|automation|assistant|support|services?)|"
+        r"(?:automated|AI.{0,5}assisted|LLM.{0,5}powered|tool.{0,10})\s+systematic\s+(?:literature\s+)?review(?:s)?)",
+        re.IGNORECASE | re.VERBOSE,
     ),
     "integrity_governance": re.compile(
         r"\b(?:publication ethics|research integrity|research ethics|journal policy|"
-        r"editorial policy|editorial guidelines?|authorship|authorship policy|"
+        r"editorial policy|editorial guidelines?|"
         r"academic integrity|plagiarism detection|text similarity detection|"
         r"integridade acadêmica|integridad académica|"
         r"integridade científica|integridad científica|"
         r"ética de publicação|ética de publicación|"
-        r"peer review manipulation|paper mill|manuscript screening|"
-        r"AI-generated (?:paper|manuscript|text|content)|"
+        r"peer review manipulation|manuscript screening|"
+        # v14 audit (NOTES/screening_audit_report.md §3.4): the bare "paper mill"
+        # pulled 142 pulp-and-paper-industry papers into the integrity bucket.
+        # Restricted to research-fraud contexts.
+        r"research paper mill|"
+        r"paper mill(?:s)?\s+(?:fraud|blacklist|threat)|"
+        r"paper mill.{0,60}(?:manuscripts?|authors?|publications?)|"
+        # v14 audit (§3.4): the bare "authorship" matched the standard disclosure
+        # boilerplate ("...research, authorship, and/or publication of this
+        # article") in nearly every biomedical paper. Anchored to misconduct,
+        # policy, and attribution phrases.
+        r"authorship (?:misconduct|dispute|polic|guidelines?|dilemma|equity|attribution|practices|conflict|credits?)|"
+        r"honorary authorship|ghost authorship|gift authorship|authorship-for-sale|authorship of|"
+        r"authorship attribution|"
         r"LLM-generated (?:paper|manuscript|text|content)|"
         r"generated text detect|AI.{0,5}text detect|deepfake text|"
-        r"authorship attribution)\b",
+        # v14 audit (§3.4): the bare "AI-generated paper/manuscript/text/content"
+        # caught ~80 AIGC/marketing papers. Now requires a detection/disclosure
+        # qualifier (e.g., "detection of AI-generated text").
+        r"(?:detect|detection|identify|identifying|prevalence|disclosure|polic).{0,40}AI-generated)\b",
+        re.IGNORECASE,
+    ),
+    # v14 audit (NOTES/screening_audit_report.md §3.5): evidence synthesis as a
+    # *research activity* (abstract screening, study selection, PICO generation,
+    # living reviews) was the single largest false-negative source. New dedicated
+    # positive rule so these papers are surfaced and categorized on their own.
+    "evidence_synthesis": re.compile(
+        r"\b(?:abstract screening|study selection|reference screening|evidence synthesis|"
+        # tool(?:s)? / review(?:s)? cover the plurals in the audit's §3.3
+        # false-negative examples ("automated systematic reviews using machine
+        # learning", "toward automating living systematic reviews").
+        r"systematic review (?:automation|tool(?:s)?|assistant|support)|automated systematic review(?:s)?|"
+        r"living systematic review(?:s)?|title.{0,15}abstract screening|"
+        r"PICO.{0,25}(?:generation|queries)|meta-analysis automation)\b",
+        re.IGNORECASE,
+    ),
+    # v14 audit (NOTES/screening_audit_report.md §3.5): editorial-policy,
+    # medical/scientific-writing, and AI-text-detection papers were the other
+    # large false-negative source (concentrated in clusters 0 and 2). New rule so
+    # these count as a positive scholarly-communication signal.
+    "scholarly_publishing": re.compile(
+        r"\b(?:journal polic(?:y|ies)|editorial polic(?:y|ies)|publishing polic(?:y|ies)|"
+        r"author guidelines?|manuscript preparation|publication ethics|predatory journal|"
+        r"ORCID|AI-generated text detection|AI-text detection|machine-generated text detection|"
+        r"content detection|medical writing|scientific writing|"
+        r"revisão por pares|revisión por pares)\b",
+        re.IGNORECASE,
+    ),
+    # v15 review (independent reviewers): two papers on AI-literacy instruction
+    # were missed by the no_scope_signal pass because they carry no other
+    # scholarly-communication vocabulary. New positive rule surfaces them.
+    "ai_literacy": re.compile(
+        r"\b(?:AI literacy|artificial intelligence literacy|algorithmic literacy|"
+        r"AI competency|AI competencies|GenAI literacy|generative AI literacy)\b",
         re.IGNORECASE,
     ),
 }
@@ -246,6 +326,11 @@ AI_SIGNAL_RULES = {
     "generative_ai": re.compile(r"\b(?:generative AI|IA generativa|GenAI|foundation models?)\b", re.IGNORECASE),
     "chatgpt": re.compile(r"\b(?:ChatGPT|GPT-4(?:o)?|GPT-?[0-9])\b", re.IGNORECASE),
     "nlp": re.compile(r"\b(?:natural language processing|NLP)\b", re.IGNORECASE),
+    # v2.2 (independent review slices A/D/FG): papers that say "language models"
+    # without "large", use "text classification"/"classifier"/"term weighting"
+    # for MLAI applied to scholarly tasks, or use "embedding(s)" / "automated
+    # peer review" — all are genuine AI-signal papers the v2.1 rules missed.
+    "language_models": re.compile(r"\b(?:language models?|text classification|classifier|term weighting|automated peer review|embeddings?)\b", re.IGNORECASE),
 }
 
 HARD_NEGATIVE_SCOPE_RULES = {
@@ -259,10 +344,18 @@ HARD_NEGATIVE_SCOPE_RULES = {
         re.IGNORECASE,
     ),
     "classroom_pedagogy": re.compile(
-        r"\b(?:teacher attitudes?|student perceptions?|students'? perceptions?|classroom|"
-        r"pedagog(?:y|ical)|curriculum|course design|learning outcomes|instructional|lesson|"
-        # Removed: "writing skills" — too generic, catches legitimate research-writing papers.
-        r"language skills|educational technology)\b",
+        # v14 audit (NOTES/screening_audit_report.md §2.4/2.7.2): bare "perceptions",
+        # "classroom", "curriculum", "course design", "learning outcomes", "teacher
+        # attitudes", "lesson" and "instructional" fired on higher-education AI-
+        # literacy and academic-integrity papers. Replaced with K-12/secondary and
+        # teaching-tool signals that reliably indicate classroom-tool papers.
+        r"\b(?:K-?12|secondary (?:education|school)|middle school|high school|primary school|"
+        r"lesson plan|tutoring|quiz generation|intelligent tutoring|learning analytics|"
+        r"instructional design|educational technology|"
+        # "pedagogy" kept but narrowed to teaching-strategy contexts so papers on
+        # HE academic-writing pedagogy (audit §2.4 false alarms) are not excluded;
+        # screening.py applies the context-aware veto only when no positive signal.
+        r"(?:teaching\s+pedagog(?:y|ical)|pedagog(?:y|ical)\s+(?:practices?|strategies?|approaches?|tools?|methods?)))\b",
         re.IGNORECASE,
     ),
     "medical": re.compile(
@@ -273,9 +366,13 @@ HARD_NEGATIVE_SCOPE_RULES = {
     ),
     "industrial": re.compile(
         r"\b(?:marketing|manufacturing|supply chain|e-commerce|corporate|fisheries|farmers|"
-        r"agricultur|tourism|hotel|service recovery|social media|finance|policing|"
+        r"agricultur|tourism|hotel|service recovery|finance|policing|"
         r"government document|news recommendation|geological|business|remote sensing|"
-        r"geospatial|archaeolog|smart cities)\b",
+        r"geospatial|archaeolog|smart cities|"
+        # v14 audit (NOTES/screening_audit_report.md §2.7.4): bare "social media"
+        # fired on scientometrics/scholarly-communication papers (citation or
+        # readership prediction); restricted to marketing/advertising contexts.
+        r"social media (?:marketing|consumer|brand|influencer))\b",
         re.IGNORECASE,
     ),
 }
