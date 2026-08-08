@@ -258,6 +258,7 @@ def run(paths: RunPaths) -> None:
         n=("id", "count"),
         pct_e_pos=("axis_e_technology", lambda x: (x > 0).mean() * 100),
         mean_e=("axis_e_technology", "mean"),
+        mean_g=("axis_g_guardrails", "mean"),
         mean_n=("axis_n_domain", "mean"),
         mean_r=("axis_r_scope", "mean"),
     )
@@ -278,7 +279,7 @@ def run(paths: RunPaths) -> None:
     save_cols = [
         "id", "title", "publication_year", "cluster", "cluster_label",
         "cluster_description", "category", "primary_topic", "cited_by_count",
-        "axis_e_technology", "axis_n_domain", "axis_r_scope",
+        "axis_e_technology", "axis_g_guardrails", "axis_n_domain", "axis_r_scope",
     ]
     df[save_cols].to_csv(paths.indicators_dir / "axis_scores_enriched.csv", index=False)
 

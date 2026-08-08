@@ -15,20 +15,20 @@ CLUSTER_METADATA: dict[int, dict[str, str]] = {
         "description": "Artigos com foco predominante em aplicacoes de IA em engenharia, sensores/IoT, seguranca, meio ambiente e sistemas de monitoramento.",
     },
     1: {
-        "label": "Clinical Risk and Prediction Models",
+        "label": "Clinical Prediction and Risk Modeling",
         "description": "Artigos com foco predominante em modelos clinicos de risco, prognostico, triagem, NLP/EHR e predicao de desfechos.",
     },
     2: {
-        "label": "Medical Imaging and Diagnostic AI",
+        "label": "Medical Imaging and Diagnostic Applications",
         "description": "Artigos com foco predominante em radiologia, radiomica, visao computacional medica, imagem diagnostica e IA para apoio ao diagnostico.",
     },
     3: {
-        "label": "ChatGPT in Education and Research · Integrity and Writing",
-        "description": "Artigos com foco predominante em ChatGPT/LLMs na educacao e pesquisa, integridade academica, escrita cientifica e uso institucional dessas ferramentas.",
+        "label": "ChatGPT in Academic Communication · Education and Writing",
+        "description": "Artigos com foco predominante em ChatGPT/LLMs na comunicacao academica, educacao, escrita cientifica, integridade e uso institucional dessas ferramentas.",
     },
     4: {
-        "label": "AI in Higher Education · Policy, Assessment and Literacy",
-        "description": "Artigos com foco predominante em IA/GenAI no ensino superior, politicas, avaliacao, letramento critico, confianca e impactos sociotecnicos.",
+        "label": "Higher Education · Policy, Assessment and AI Literacy",
+        "description": "Artigos com foco predominante em IA/GenAI no ensino superior, politicas, avaliacao, letramento em IA, confianca e impactos sociotecnicos.",
     },
 }
 
@@ -320,6 +320,7 @@ LOW_QUALITY_ABSTRACT_RE = re.compile(
 
 AXIS_LABELS = {
     "axis_e_technology": "Eixo E — Enquadramento Tecnologico",
+    "axis_g_guardrails": "Eixo G — Uso/Ferramentas (Workflow)→Guardrails/Governanca",
     "axis_n_domain": "Eixo N — Postura (Oportunidade→Risco/Governança)",
     "axis_r_scope": "Eixo R — Domínio (Acadêmico→Clínico)",
 }

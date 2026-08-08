@@ -549,7 +549,7 @@ SEMANTIC_SCHOLAR_API_KEY = ""         # ou variável de ambiente S2_API_KEY
 
 | Cluster | Label | n | Característica principal |
 |---------|-------|---|--------------------------|
-| C0 | **EFL teaching** | 244 | Integração de IA genérica em salas de aula de inglês; metodologias pedagógicas |
+| C0 | **EFL teaching** | 244 | Integração de IA Convencional em salas de aula de inglês; metodologias pedagógicas |
 | C1 | **ChatGPT surveys** | 67 | Percepções, adoção e ética do ChatGPT; levantamentos pós-2023 |
 | C2 | **NLP/translation** | 92 | Tradução automática, PLN, processamento de fala; domínio instrumental |
 | C3 | **EFL outcomes** | 134 | Efeitos da IA em aprendizes de L2; dependência, literacia, habilidades |
@@ -564,7 +564,7 @@ SEMANTIC_SCHOLAR_API_KEY = ""         # ou variável de ambiente S2_API_KEY
 Três eixos selecionados de um torneio de 7 candidatos. Método: embedding de sentenças-polo (BGE-M3), projeção dos 586 abstracts, validação LOO com 6 paráfrases por eixo.
 
 ### Eixo E — Enquadramento Tecnológico
-**Polo negativo (−):** IA genérica ("AI", "machine learning", sem nome específico)
+**Polo negativo (−):** IA Convencional ("AI", "machine learning", sem nome específico)
 **Polo positivo (+):** ChatGPT / IA Generativa (nomeada)
 
 | Métrica | Valor |
@@ -627,7 +627,7 @@ Nenhum eixo mostra tendência temporal significativa (todos p > 0.06). O que mud
 | 2025 | 255 | 45% | 10% | 12% | 23% | 11% |
 
 **Interpretação para o artigo:**
-> "O ChatGPT não converteu a literatura existente — criou uma corrente paralela (C1, 16% em 2023), enquanto o fluxo de artigos sobre ensino de inglês com IA genérica continuou crescendo. Em 2024–2025, o C0 inundou o campo, diluindo a proporção de artigos ChatGPT-específicos de volta para ~10%."
+> "O ChatGPT não converteu a literatura existente — criou uma corrente paralela (C1, 16% em 2023), enquanto o fluxo de artigos sobre ensino de inglês com IA Convencional continuou crescendo. Em 2024–2025, o C0 inundou o campo, diluindo a proporção de artigos ChatGPT-específicos de volta para ~10%."
 
 **Padrão secundário:** NLP/tradução dominava 2021–2022 (era pré-ChatGPT). A proporção caiu de 67% → 12%. Isso indica que a agenda de PLN instrumental caiu de relevância relativa após a emergência dos LLMs.
 
@@ -657,7 +657,7 @@ Nenhum eixo mostra tendência temporal significativa (todos p > 0.06). O que mud
 
 | Quartil | n | Mediana cit | Média cit |
 |---------|---|------------|-----------|
-| Q1 — IA genérica | 147 | 0.0 | 6.5 |
+| Q1 — IA Convencional | 147 | 0.0 | 6.5 |
 | Q2 | 146 | 0.5 | 7.3 |
 | Q3 | 146 | 1.0 | 8.2 |
 | Q4 — ChatGPT/GenAI | 147 | 1.0 | **13.1** |
@@ -888,13 +888,13 @@ e autovetores para largura/altura/ângulo da elipse. Padrão common em scatter s
 
 Figura central da análise semântica — análogo direto ao diagrama de dispersão de traduções do Veredas.
 
-- Eixo X = Axis E (−=IA genérica, +=ChatGPT/GenAI); Eixo Y = Axis A (−=aluno, +=pesquisador)
+- Eixo X = Axis E (−=IA Convencional, +=ChatGPT/GenAI); Eixo Y = Axis A (−=aluno, +=pesquisador)
 - **4 quadrantes** com rótulos (caixas de texto nos cantos):
   ```
-  Q2: IA genérica         | Q1: ChatGPT
+  Q2: IA Convencional         | Q1: ChatGPT
       → pesquisador        |     → pesquisador
   ─────────────────●───────────── 0 (Y)
-  Q3: IA genérica         | Q4: ChatGPT
+  Q3: IA Convencional         | Q4: ChatGPT
       → aluno EFL          |     → aluno EFL
   ```
 - Ponto colorido por cluster, tamanho = log1p(cited_by_count)
@@ -909,7 +909,7 @@ Figura central da análise semântica — análogo direto ao diagrama de dispers
 **Fig 7 — Eixo E por Quartil × Citações (box plot + swarm overlay)**
 *Seção 4.6* · *Dados: `axis_scores_enriched.csv`* · *Output: `fig07_axis_e_citations.png`*
 
-- Dividir corpus em 4 quartis do Axis E (Q1=IA genérica → Q4=ChatGPT/GenAI)
+- Dividir corpus em 4 quartis do Axis E (Q1=IA Convencional → Q4=ChatGPT/GenAI)
 - Box plot horizontal (violins muito comprimidos para dados com muitos zeros)
 - **Swarm overlay** com `seaborn.stripplot(dodge=True, alpha=0.35, jitter=0.2)` para mostrar
   distribuição real (ideia do Veredas: sempre mostrar os dados brutos junto com sumário)

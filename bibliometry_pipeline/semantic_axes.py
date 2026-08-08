@@ -75,6 +75,48 @@ POS_N_VARIANTS = [
     " expert verification, calling for urgent safeguards in scholarly publishing.",
 ]
 
+# Axis G — Scholarly use: Workflow/tool enablement  →  Guardrails/risk-assessment focus
+# This axis is intentionally written as a clean textual contrast rather than derived from tags.
+# The goal is to separate papers that mainly treat GenAI as a research/writing aid from papers
+# that mainly frame GenAI around guardrails, risk assessment, integrity, disclosure, and policy.
+NEG_G = (
+    "This paper evaluates ChatGPT and other large language models as tools for academic "
+    "workflows such as literature search, title and abstract screening, systematic reviews, "
+    "manuscript drafting, academic writing support, revision, feedback generation, and peer "
+    "review assistance. The central question is how generative AI can help researchers, "
+    "reviewers, and students perform scholarly tasks more effectively."
+)
+POS_G = (
+    "This paper examines responsible use of ChatGPT in higher education and scholarly "
+    "publishing, focusing on academic integrity, AI literacy, detection of AI-generated text, "
+    "hallucinated references, disclosure and authorship rules, assessment redesign, journal or "
+    "university guidelines, and institutional guardrails for governing generative AI in "
+    "academic work."
+)
+NEG_G_VARIANTS = [
+    "The study tests large language models as assistants for academic writing, abstract "
+    "screening, systematic review workflows, literature synthesis, and manuscript preparation, "
+    "with emphasis on practical task support.",
+    "Researchers assess whether ChatGPT can support peer review, feedback writing, database "
+    "searching, editing, and drafting in scholarly communication and research workflows.",
+    "The paper treats generative AI as a copilot for academic work, helping with writing, "
+    "reviewing, screening, summarising, and other research tasks rather than discussing policy "
+    "or integrity rules.",
+]
+POS_G_VARIANTS = [
+    "The study asks how universities should set rules for ChatGPT use, emphasising academic "
+    "integrity, disclosure, student assessment policies, AI literacy, and responsible-use "
+    "guidelines.",
+    "Researchers evaluate guardrails for generative AI in scholarly publishing, including "
+    "authorship disclosure, fabricated references, plagiarism concerns, detection of "
+    "AI-generated text, and editorial policy.",
+    "The paper focuses on governance of generative AI in academic settings: responsible use, "
+    "risk assessment, institutional policy, integrity protection, and rules for using ChatGPT "
+    "in education and research.",
+]
+NEG_G_PROTOTYPES = [NEG_G, *NEG_G_VARIANTS]
+POS_G_PROTOTYPES = [POS_G, *POS_G_VARIANTS]
+
 # Axis R — Domain: Academic/scholarly/education context  →  Clinical/biomedical/healthcare context
 # Two major discourse communities in this corpus with near-zero lexical overlap.
 NEG_R = (
@@ -123,6 +165,23 @@ def _make_axis(model: SentenceTransformer, neg: str, pos: str) -> np.ndarray:
     return vector
 
 
+def _make_centered_axis_from_vectors(neg_vec: np.ndarray, pos_vec: np.ndarray) -> tuple[np.ndarray, float]:
+    vector = pos_vec - neg_vec
+    vector /= np.linalg.norm(vector)
+    center = float(((pos_vec @ vector) + (neg_vec @ vector)) / 2.0)
+    return vector.astype(np.float32), center
+
+
+def _make_centered_text_axis(model: SentenceTransformer, neg: str, pos: str) -> tuple[np.ndarray, float]:
+    return _make_centered_axis_from_vectors(_encode(model, neg), _encode(model, pos))
+
+
+def _make_prototype_axis(model: SentenceTransformer, neg_texts: list[str], pos_texts: list[str]) -> tuple[np.ndarray, float]:
+    neg_vec = np.stack([_encode(model, text) for text in neg_texts], axis=0).mean(axis=0)
+    pos_vec = np.stack([_encode(model, text) for text in pos_texts], axis=0).mean(axis=0)
+    return _make_centered_axis_from_vectors(neg_vec, pos_vec)
+
+
 def _loo(model: SentenceTransformer, embeddings: np.ndarray, primary_scores, neg_variants, pos_variants, neg_pole, pos_pole):
     rhos = []
     for variant in neg_variants:
@@ -131,6 +190,21 @@ def _loo(model: SentenceTransformer, embeddings: np.ndarray, primary_scores, neg
     for variant in pos_variants:
         rho, _ = spearmanr(primary_scores, embeddings @ _make_axis(model, neg_pole, variant))
         rhos.append(rho)
+    return float(np.mean(rhos)), float(np.min(rhos))
+
+
+def _loo_prototype_axis(model: SentenceTransformer, embeddings: np.ndarray, primary_scores, neg_texts, pos_texts):
+    rhos: list[float] = []
+    for idx in range(len(neg_texts)):
+        sampled_neg = neg_texts[:idx] + neg_texts[idx + 1:]
+        sampled_vec, sampled_center = _make_prototype_axis(model, sampled_neg, pos_texts)
+        rho, _ = spearmanr(primary_scores, (embeddings @ sampled_vec) - sampled_center)
+        rhos.append(float(rho))
+    for idx in range(len(pos_texts)):
+        sampled_pos = pos_texts[:idx] + pos_texts[idx + 1:]
+        sampled_vec, sampled_center = _make_prototype_axis(model, neg_texts, sampled_pos)
+        rho, _ = spearmanr(primary_scores, (embeddings @ sampled_vec) - sampled_center)
+        rhos.append(float(rho))
     return float(np.mean(rhos)), float(np.min(rhos))
 
 
@@ -146,24 +220,30 @@ def run(paths: RunPaths) -> None:
     vec_e = _make_axis(model, NEG_E, POS_E)
     vec_n = _make_axis(model, NEG_N, POS_N)
     vec_r = _make_axis(model, NEG_R, POS_R)
+    vec_g, center_g = _make_prototype_axis(model, NEG_G_PROTOTYPES, POS_G_PROTOTYPES)
 
     df["axis_e_technology"] = embeddings @ vec_e
+    df["axis_g_guardrails"] = (embeddings @ vec_g) - center_g
     df["axis_n_domain"] = embeddings @ vec_n
     df["axis_r_scope"] = embeddings @ vec_r
 
+    r_eg, _ = pearsonr(df["axis_e_technology"], df["axis_g_guardrails"])
     r_en, _ = pearsonr(df["axis_e_technology"], df["axis_n_domain"])
     r_er, _ = pearsonr(df["axis_e_technology"], df["axis_r_scope"])
+    r_gn, _ = pearsonr(df["axis_g_guardrails"], df["axis_n_domain"])
+    r_gr, _ = pearsonr(df["axis_g_guardrails"], df["axis_r_scope"])
     r_nr, _ = pearsonr(df["axis_n_domain"], df["axis_r_scope"])
 
     loo_results = {
         "E": _loo(model, embeddings, df["axis_e_technology"].values, NEG_E_VARIANTS, POS_E_VARIANTS, NEG_E, POS_E),
+        "G": _loo_prototype_axis(model, embeddings, df["axis_g_guardrails"].values, NEG_G_PROTOTYPES, POS_G_PROTOTYPES),
         "N": _loo(model, embeddings, df["axis_n_domain"].values, NEG_N_VARIANTS, POS_N_VARIANTS, NEG_N, POS_N),
         "R": _loo(model, embeddings, df["axis_r_scope"].values, NEG_R_VARIANTS, POS_R_VARIANTS, NEG_R, POS_R),
     }
 
     out = df[[
         "id", "title", "publication_year", "cluster",
-        "axis_e_technology", "axis_n_domain", "axis_r_scope",
+        "axis_e_technology", "axis_g_guardrails", "axis_n_domain", "axis_r_scope",
     ]].copy()
     out.to_csv(paths.indicators_dir / "axis_scores.csv", index=False)
 
@@ -173,13 +253,20 @@ def run(paths: RunPaths) -> None:
         "",
         "Selected axes:",
         "  E: Generic AI framing -> ChatGPT/Named GenAI specific",
+        "  G: Workflow/tool enablement -> Guardrails/risk-assessment focus (hand-written prototype sets)",
         "  N: Opportunity/productivity framing -> Risk/harm/governance framing (Posture)",
         "  R: Academic/scholarly/education context -> Clinical/biomedical/healthcare context (Domain)",
         "",
         "Orthogonality (Pearson r between projected scores):",
+        f"  E x G: {r_eg:+.4f}",
         f"  E x N: {r_en:+.4f}",
         f"  E x R: {r_er:+.4f}",
+        f"  G x N: {r_gn:+.4f}",
+        f"  G x R: {r_gr:+.4f}",
         f"  N x R: {r_nr:+.4f}",
+        "",
+        f"Guardrails axis centered at the midpoint between its written negative and positive prototype sets: center={center_g:+.4f}.",
+        "Stability for E, N, and R uses leave-one-out paraphrases of the text poles; G uses leave-one-out over its written prototype sentences.",
         "",
         "LOO Stability:",
     ]

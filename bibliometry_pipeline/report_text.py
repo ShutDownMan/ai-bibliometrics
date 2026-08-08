@@ -411,13 +411,13 @@ def run(paths: RunPaths) -> Path:
 
     append(_h2("3.4 Tendências dos Eixos por Ano"))
     temp_md = temporal.copy()
-    temp_md.columns = ["Ano", "N", "% E>0", "Média E", "Média N", "Média R"]
+    temp_md.columns = ["Ano", "N", "% E>0", "Média E", "Média G", "Média N", "Média R"]
     for column in temp_md.columns[2:]:
         temp_md[column] = temp_md[column].round(4)
     append(_df_to_md(temp_md))
     append(_note(
         f"A menção explícita a ChatGPT/GenAI (E>0) atinge pico em 2023 ({_e_pos_by_year.loc[2023]:.1f}%) e depois recua para {_e_pos_by_year.loc[2025]:.1f}% em 2025 e {_e_pos_by_year.loc[2026]:.1f}% em 2026. "
-        "Esse padrão é compatível com a narrativa de normalização do rótulo, mas precisa ser confrontado com os demais testes antes de virar conclusão."
+        "Ao mesmo tempo, G ajuda a separar o campo acadêmico entre uso/ferramentas e guardrails/governança, oferecendo um contraste mais próximo da tese substantiva do artigo."
     ))
 
     append(_hr())
@@ -479,6 +479,7 @@ def run(paths: RunPaths) -> Path:
     axes = summary["axes"]
     axes_df = pd.DataFrame([
         ["Eixo E", axes["means"]["E"], axes["std"]["E"], summary["spearman"]["E"]["rho_all"], summary["spearman"]["E"]["p_all"]],
+        ["Eixo G", axes["means"]["G"], axes["std"]["G"], summary["spearman"]["G"]["rho_all"], summary["spearman"]["G"]["p_all"]],
         ["Eixo N", axes["means"]["N"], axes["std"]["N"], summary["spearman"]["N"]["rho_all"], summary["spearman"]["N"]["p_all"]],
         ["Eixo R", axes["means"]["R"], axes["std"]["R"], summary["spearman"]["R"]["rho_all"], summary["spearman"]["R"]["p_all"]],
     ], columns=["Eixo", "Média", "Std", "ρ citações", "p"])
@@ -487,10 +488,10 @@ def run(paths: RunPaths) -> Path:
     axes_df["ρ citações"] = axes_df["ρ citações"].map(lambda value: f"{value:+.3f}")
     axes_df["p"] = axes_df["p"].map(_fmt_p)
     # Mark significance
-    ps = [summary["spearman"][ax]["p_all"] for ax in ("E", "N", "R")]
+    ps = [summary["spearman"][ax]["p_all"] for ax in ("E", "G", "N", "R")]
     axes_df["sig."] = ["*" if p < 0.05 else "ns" for p in ps]
     append(_df_to_md(axes_df))
-    _sig_axes = [name for name, p in zip(("E", "N", "R"), ps) if p < 0.05]
+    _sig_axes = [name for name, p in zip(("E", "G", "N", "R"), ps) if p < 0.05]
     if len(_sig_axes) == 1:
         _sig_text = f"Apenas o Eixo {_sig_axes[0]} tem correlação estatisticamente significativa com citações."
     elif len(_sig_axes) == 0:
@@ -498,36 +499,37 @@ def run(paths: RunPaths) -> Path:
     else:
         _sig_text = f"Os eixos {', '.join(_sig_axes[:-1])} e {_sig_axes[-1]} têm correlação estatisticamente significativa com citações."
     append(_note(f"* p < 0.05 (Spearman). {_sig_text}"))
+    append(_note(
+        "Leitura substantiva: E mede enquadramento tecnológico, G mede a clivagem entre uso/ferramentas e guardrails/governança no contexto acadêmico, "
+        "N permanece como eixo retórico mais amplo de oportunidade→risco e R mede domínio acadêmico→clínico."
+    ))
 
     append(_h3("5.2.1 Ortogonalidade"))
     ortho = pd.DataFrame([
+        ["E × G", axes["orthogonality"]["E_G"]],
         ["E × N", axes["orthogonality"]["E_N"]],
         ["E × R", axes["orthogonality"]["E_R"]],
+        ["G × N", axes["orthogonality"]["G_N"]],
+        ["G × R", axes["orthogonality"]["G_R"]],
         ["N × R", axes["orthogonality"]["N_R"]],
     ], columns=["Par", "Pearson r"])
     ortho["Pearson r"] = ortho["Pearson r"].map(lambda value: f"{value:+.3f}")
     append(_df_to_md(ortho))
-    _nr = axes["orthogonality"]["N_R"]
-    _nr_abs = abs(_nr)
-    if _nr_abs >= 0.20:
-        _nr_label = "moderada"
-        _nr_note = (
-            f"N×R = {_nr:+.3f}: correlação {_nr_label} entre os eixos — "
-            "artigos com postura mais voltada a risco/governança tendem a ocorrer mais em um dos polos do eixo de domínio. "
-            "As duas dimensões não são completamente independentes neste corpus. "
-            "Isso não invalida a distinção conceitual, mas deve ser considerado na interpretação."
-        )
-    elif _nr_abs >= 0.10:
-        _nr_label = "fraca"
-        _nr_note = (
-            f"N×R = {_nr:+.3f}: correlação {_nr_label} entre os eixos. "
-            "Os eixos N e R são razoavelmente independentes neste corpus, "
-            "embora mantenham alguma correlação residual a considerar."
-        )
-    else:
-        _nr_note = None
-    if _nr_note:
-        append(_note(_nr_note))
+    _ortho_pairs = {
+        "E×G": axes["orthogonality"]["E_G"],
+        "E×N": axes["orthogonality"]["E_N"],
+        "E×R": axes["orthogonality"]["E_R"],
+        "G×N": axes["orthogonality"]["G_N"],
+        "G×R": axes["orthogonality"]["G_R"],
+        "N×R": axes["orthogonality"]["N_R"],
+    }
+    _max_pair, _max_corr = max(_ortho_pairs.items(), key=lambda item: abs(item[1]))
+    if abs(_max_corr) >= 0.20:
+        append(_note(
+            f"A maior correlação residual é {_max_pair} = {_max_corr:+.3f}. "
+            "Isso sugere alguma sobreposição entre dimensões, mas não a ponto de colapsá-las numa única medida. "
+            "No caso de G, parte dessa aproximação é esperada porque guardrails aparecem sobretudo no domínio acadêmico-educacional."
+        ))
 
     append(_h3("5.2.2 Estabilidade dos Polos (LOO)"))
     if not loo_stability_df.empty:
@@ -537,18 +539,21 @@ def run(paths: RunPaths) -> Path:
         append(_df_to_md(_loo_disp))
         _loo_failed = [row["Eixo"] for _, row in loo_stability_df.iterrows() if row["Status"] != "PASS"]
         _loo_passed = [row["Eixo"] for _, row in loo_stability_df.iterrows() if row["Status"] == "PASS"]
+        append(_note(
+            "E, N e R usam validação leave-one-out sobre paráfrases dos polos textuais. "
+            "G usa leave-one-out sobre um pequeno conjunto de protótipos textuais escritos à mão, "
+            "separando artigos de uso/ferramentas de artigos centrados em guardrails, integridade, disclosure e governança no contexto acadêmico."
+        ))
         if _loo_failed:
             _ax_word = "Eixo" if len(_loo_failed) == 1 else "Eixos"
             _pa_word = "Eixo" if len(_loo_passed) == 1 else "Eixos"
             append(_note(
-                "Cada linha substitui um polo-âncora por uma formulação variante e mede a correlação de Spearman com o score primário. "
-                f"{_ax_word} {', '.join(_loo_failed)}: ρ mín. < 0.70 — o score é sensível à formulação da âncora; interpretações sobre {'esse eixo devem' if len(_loo_failed) == 1 else 'esses eixos devem'} ser qualificadas. "
-                + (f"{_pa_word} {', '.join(_loo_passed)}: ρ mín. ≥ 0.70 — polo estável." if _loo_passed else "")
+                f"{_ax_word} {', '.join(_loo_failed)}: ρ mín. < 0.70 — interpretações sobre {'esse eixo devem' if len(_loo_failed) == 1 else 'esses eixos devem'} ser qualificadas. "
+                + (f"{_pa_word} {', '.join(_loo_passed)}: ρ mín. ≥ 0.70 — separação estável." if _loo_passed else "")
             ))
         else:
             append(_note(
-                "Todos os eixos passam no LOO (ρ mín. ≥ 0.70): os polos capturam sinais semânticos estáveis independentemente de variações de redação da âncora. "
-                "Isso aumenta a confiança de que E, N e R medem constructos coerentes, não artefatos de uma formulação específica."
+                "Todos os eixos passam no critério de estabilidade adotado para sua construção."
             ))
     else:
         append(_note(
@@ -559,7 +564,7 @@ def run(paths: RunPaths) -> Path:
     append(_h1("6. Testes de Impacto"))
     append(_h2("6.1 Impacto por Framing Tecnológico"))
     quartiles = pd.DataFrame(summary["quartiles_e"])
-    quartiles["quartile"] = quartiles["quartile"].replace({"Q1": "Q1 — IA genérica", "Q4": "Q4 — ChatGPT/GenAI"})
+    quartiles["quartile"] = quartiles["quartile"].replace({"Q1": "Q1 — IA Convencional", "Q4": "Q4 — ChatGPT/GenAI"})
     quartiles.columns = ["Quartil E", "N", "Mediana cit.", "Média cit."]
     quartiles["Mediana cit."] = quartiles["Mediana cit."].round(1)
     quartiles["Média cit."] = quartiles["Média cit."].round(1)
@@ -568,6 +573,7 @@ def run(paths: RunPaths) -> Path:
     hypotheses = summary["hypotheses"]
     hyp_df = pd.DataFrame([
         ["E Q4 > Q1", "confirmada" if hypotheses["E_q4_gt_q1"]["confirmed"] else "não confirmada", _fmt_p(hypotheses["E_q4_gt_q1"]["p"])],
+        ["G Q4 > Q1", "confirmada" if hypotheses["G_q4_gt_q1"]["confirmed"] else "não confirmada", _fmt_p(hypotheses["G_q4_gt_q1"]["p"])],
         ["N Q4 > Q1", "confirmada" if hypotheses["N_q4_gt_q1"]["confirmed"] else "não confirmada", _fmt_p(hypotheses["N_q4_gt_q1"]["p"])],
         ["R Q4 > Q1", "confirmada" if hypotheses["R_q4_gt_q1"]["confirmed"] else "não confirmada", _fmt_p(hypotheses["R_q4_gt_q1"]["p"])],
     ], columns=["Hipótese", "Resultado", "p-value"])
@@ -948,8 +954,8 @@ def run(paths: RunPaths) -> Path:
     append(_h1("11. Corpus Focal — Clusters C3 + C4 (Campo em Formação)"))
     append(_note(
         "Esta seção restringe a análise ao **subconjunto focal** de 1.709 artigos dos clusters C3 "
-        "(_ChatGPT in Education and Research · Integrity and Writing_) e C4 "
-        "(_AI in Higher Education · Policy, Assessment and Literacy_). "
+        f"(_{_cluster_label_by_id[3]}_) e C4 "
+        f"(_{_cluster_label_by_id[4]}_). "
         "Esses dois clusters são os que endereçam diretamente o uso de IA como ferramenta de apoio "
         "à produção acadêmica; os demais (C0–C2) são biomédico/engenharia de amplo espectro. "
         "Os indicadores globais (PRISMA, geo, Bradford, Lotka) continuam sendo calculados sobre o corpus "

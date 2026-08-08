@@ -56,13 +56,15 @@ def run(paths: RunPaths) -> dict:
 
     axis["cited_by_count"] = pd.to_numeric(axis["cited_by_count"], errors="coerce").fillna(0)
 
-    corr = axis[["axis_e_technology", "axis_n_domain", "axis_r_scope"]].corr(method="pearson")
+    corr = axis[["axis_e_technology", "axis_g_guardrails", "axis_n_domain", "axis_r_scope"]].corr(method="pearson")
     rho_e_all, p_e_all = stats.spearmanr(axis["cited_by_count"], axis["axis_e_technology"])
+    rho_g_all, p_g_all = stats.spearmanr(axis["cited_by_count"], axis["axis_g_guardrails"])
     rho_n_all, p_n_all = stats.spearmanr(axis["cited_by_count"], axis["axis_n_domain"])
     rho_r_all, p_r_all = stats.spearmanr(axis["cited_by_count"], axis["axis_r_scope"])
 
     cited_only = axis[axis["cited_by_count"] > 0].copy()
     rho_e_cit, p_e_cit = stats.spearmanr(cited_only["cited_by_count"], cited_only["axis_e_technology"])
+    rho_g_cit, p_g_cit = stats.spearmanr(cited_only["cited_by_count"], cited_only["axis_g_guardrails"])
     rho_n_cit, p_n_cit = stats.spearmanr(cited_only["cited_by_count"], cited_only["axis_n_domain"])
     rho_r_cit, p_r_cit = stats.spearmanr(cited_only["cited_by_count"], cited_only["axis_r_scope"])
 
@@ -76,6 +78,8 @@ def run(paths: RunPaths) -> dict:
 
     top_e = axis[axis["axis_e_technology"] >= axis["axis_e_technology"].quantile(0.75)]["cited_by_count"]
     bot_e = axis[axis["axis_e_technology"] <= axis["axis_e_technology"].quantile(0.25)]["cited_by_count"]
+    top_g = axis[axis["axis_g_guardrails"] >= axis["axis_g_guardrails"].quantile(0.75)]["cited_by_count"]
+    bot_g = axis[axis["axis_g_guardrails"] <= axis["axis_g_guardrails"].quantile(0.25)]["cited_by_count"]
     top_n = axis[axis["axis_n_domain"] >= axis["axis_n_domain"].quantile(0.75)]["cited_by_count"]
     bot_n = axis[axis["axis_n_domain"] <= axis["axis_n_domain"].quantile(0.25)]["cited_by_count"]
     top_r = axis[axis["axis_r_scope"] >= axis["axis_r_scope"].quantile(0.75)]["cited_by_count"]
@@ -97,6 +101,7 @@ def run(paths: RunPaths) -> dict:
             "n": int(count),
             "pct": round(100 * count / len(axis), 1),
             "mean_e": float(cluster_rows["axis_e_technology"].mean()),
+            "mean_g": float(cluster_rows["axis_g_guardrails"].mean()),
             "mean_n": float(cluster_rows["axis_n_domain"].mean()),
             "mean_r": float(cluster_rows["axis_r_scope"].mean()),
         })
@@ -139,27 +144,34 @@ def run(paths: RunPaths) -> dict:
         "axes": {
             "means": {
                 "E": float(axis["axis_e_technology"].mean()),
+                "G": float(axis["axis_g_guardrails"].mean()),
                 "N": float(axis["axis_n_domain"].mean()),
                 "R": float(axis["axis_r_scope"].mean()),
             },
             "std": {
                 "E": float(axis["axis_e_technology"].std()),
+                "G": float(axis["axis_g_guardrails"].std()),
                 "N": float(axis["axis_n_domain"].std()),
                 "R": float(axis["axis_r_scope"].std()),
             },
             "orthogonality": {
+                "E_G": float(corr.loc["axis_e_technology", "axis_g_guardrails"]),
                 "E_N": float(corr.loc["axis_e_technology", "axis_n_domain"]),
                 "E_R": float(corr.loc["axis_e_technology", "axis_r_scope"]),
+                "G_N": float(corr.loc["axis_g_guardrails", "axis_n_domain"]),
+                "G_R": float(corr.loc["axis_g_guardrails", "axis_r_scope"]),
                 "N_R": float(corr.loc["axis_n_domain", "axis_r_scope"]),
             },
         },
         "spearman": {
             "E": {"rho_all": float(rho_e_all), "p_all": float(p_e_all), "rho_cited": float(rho_e_cit), "p_cited": float(p_e_cit)},
+            "G": {"rho_all": float(rho_g_all), "p_all": float(p_g_all), "rho_cited": float(rho_g_cit), "p_cited": float(p_g_cit)},
             "N": {"rho_all": float(rho_n_all), "p_all": float(p_n_all), "rho_cited": float(rho_n_cit), "p_cited": float(p_n_cit)},
             "R": {"rho_all": float(rho_r_all), "p_all": float(p_r_all), "rho_cited": float(rho_r_cit), "p_cited": float(p_r_cit)},
         },
         "hypotheses": {
             "E_q4_gt_q1": _mw(top_e, bot_e),
+            "G_q4_gt_q1": _mw(top_g, bot_g),
             "N_q4_gt_q1": _mw(top_n, bot_n),
             "R_q4_gt_q1": _mw(top_r, bot_r),
         },

@@ -18,7 +18,10 @@ from __future__ import annotations
 import argparse
 import base64
 import io
+import subprocess
 import sys
+import tempfile
+import time
 from datetime import date
 from pathlib import Path
 
@@ -96,16 +99,21 @@ _CLUSTER_LABEL_TRANSLATIONS = {
     "Other Relevant": "Outros relevantes",
     "Applied AI Systems": "Sistemas de IA aplicada",
     "Engineering and Environment": "Engenharia e meio ambiente",
-    "Clinical Risk and Prediction Models": "Modelos clinicos de risco e predicao",
-    "Medical Imaging and Diagnostic AI": "IA diagnostica por imagem",
-    "Clinical Prediction Models": "Modelos clinicos preditivos",
-    "Diagnostic AI": "IA diagnostica",
-    "Clinical Imaging AI": "IA em imagem clinica",
-    "Decision Support": "Suporte a decisao",
-    "ChatGPT in Education and Research": "ChatGPT na educacao e pesquisa",
+    "Clinical Risk and Prediction Models": "Modelos clínicos de risco e predição",
+    "Clinical Prediction and Risk Modeling": "Predição e modelagem clínica de risco",
+    "Medical Imaging and Diagnostic AI": "IA diagnóstica por imagem",
+    "Medical Imaging and Diagnostic Applications": "Aplicações diagnósticas e de imagem médica",
+    "Clinical Prediction Models": "Modelos clínicos preditivos",
+    "Diagnostic AI": "IA diagnóstica",
+    "Clinical Imaging AI": "IA em imagem clínica",
+    "Decision Support": "Suporte à decisão",
+    "ChatGPT in Education and Research": "ChatGPT na educação e pesquisa",
+    "ChatGPT in Academic Communication": "ChatGPT na comunicação acadêmica",
     "Integrity and Writing": "Integridade e escrita",
     "AI in Higher Education": "IA no ensino superior",
-    "Policy, Assessment and Literacy": "Politica, avaliacao e letramento",
+    "Higher Education": "Ensino superior",
+    "Policy, Assessment and Literacy": "Política, avaliação e letramento",
+    "Policy, Assessment and AI Literacy": "Política, avaliação e letramento em IA",
 }
 
 
@@ -174,10 +182,10 @@ def _build_raw_cluster_labels() -> dict[int, str]:
 
 _COMPACT_CLUSTER_LEGEND_LABELS = {
     0: "C0 · IA aplicada",
-    1: "C1 · Risco e prognostico",
-    2: "C2 · Diagnostico por imagem",
-    3: "C3 · ChatGPT e integridade",
-    4: "C4 · IA no ensino superior",
+    1: "C1 · Predição clínica",
+    2: "C2 · Imagem médica",
+    3: "C3 · ChatGPT e comunicação acadêmica",
+    4: "C4 · Política e letramento em IA",
 }
 
 
@@ -289,6 +297,76 @@ RED      = "#e05050"
 GREEN    = "#44b894"
 AMBER    = "#e8c44a"
 
+ARTICLE_SCALE = 1.22 if LIGHT else 1.0
+
+
+def _article_size(size: float) -> float:
+    return round(size * ARTICLE_SCALE, 2)
+
+
+def _load_png_rgba(*candidates: Path) -> np.ndarray | None:
+    for candidate in candidates:
+        if candidate.exists():
+            return np.asarray(Image.open(candidate).convert("RGBA"))
+    return None
+
+
+def _render_plotly_via_edge_screenshot(fig, *, width: int, height: int, bg: str) -> np.ndarray | None:
+    browser = Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
+    if not browser.exists():
+        return None
+
+    config = {
+        "displayModeBar": False,
+        "staticPlot": True,
+        "responsive": False,
+    }
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="plotly-shot-") as temp_dir:
+            temp_root = Path(temp_dir)
+            html_path = temp_root / "figure.html"
+            png_path = temp_root / "figure.png"
+
+            figure_html = fig.to_html(
+                full_html=False,
+                include_plotlyjs="inline",
+                config=config,
+                default_width=f"{width}px",
+                default_height=f"{height}px",
+            )
+            html_path.write_text(
+                "<!doctype html><html><head><meta charset=\"utf-8\">"
+                f"<style>html,body{{margin:0;padding:0;background:{bg};overflow:hidden;}}"
+                f"body{{width:{width}px;height:{height}px;}}</style>"
+                "</head><body>"
+                f"{figure_html}"
+                "</body></html>",
+                encoding="utf-8",
+            )
+
+            command = [
+                str(browser),
+                "--headless",
+                "--disable-gpu",
+                "--hide-scrollbars",
+                "--run-all-compositor-stages-before-draw",
+                "--virtual-time-budget=8000",
+                f"--window-size={width},{height}",
+                f"--screenshot={png_path}",
+                html_path.resolve().as_uri(),
+            ]
+            result = subprocess.run(command, capture_output=True, text=True, timeout=45)
+            if result.returncode != 0 and not png_path.exists():
+                return None
+            for _ in range(10):
+                if png_path.exists() and png_path.stat().st_size > 0:
+                    return np.asarray(Image.open(png_path).convert("RGBA"))
+                time.sleep(0.5)
+            return np.asarray(Image.open(png_path).convert("RGBA"))
+    except Exception:
+        return None
+
 # ── matplotlib rcParams ───────────────────────────────────────────────────────
 
 plt.rcParams.update({
@@ -303,8 +381,8 @@ plt.rcParams.update({
     "text.color":         TEXT,
     "xtick.color":        SUBTEXT,
     "ytick.color":        SUBTEXT,
-    "xtick.labelsize":    9,
-    "ytick.labelsize":    9,
+    "xtick.labelsize":    _article_size(9),
+    "ytick.labelsize":    _article_size(9),
     "grid.color":         GRID,
     "grid.alpha":         1.0,
     "grid.linestyle":     "--",
@@ -312,21 +390,26 @@ plt.rcParams.update({
     "legend.facecolor":   AX_BG,
     "legend.edgecolor":   EDGE,
     "legend.labelcolor":  TEXT,
-    "legend.fontsize":    9,
+    "legend.fontsize":    _article_size(9),
     "font.family":        "sans-serif",
-    "font.size":          10,
+    "font.size":          _article_size(10),
     "figure.dpi":         DPI,
     "savefig.bbox":       "tight",
-    "savefig.pad_inches": 0.25,
+    "savefig.pad_inches": 0.16 if LIGHT else 0.25,
     "savefig.facecolor":  BG,
-    "lines.linewidth":    1.8,
+    "lines.linewidth":    2.0 if LIGHT else 1.8,
 })
 
 # ── Figure helpers ────────────────────────────────────────────────────────────
 
 def _fig_to_base64(fig: plt.Figure) -> str:
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", facecolor=fig.get_facecolor())
+    save_kwargs = {"format": "png"}
+    if LIGHT:
+        save_kwargs["transparent"] = True
+    else:
+        save_kwargs["facecolor"] = fig.get_facecolor()
+    fig.savefig(buf, **save_kwargs)
     buf.seek(0)
     enc = base64.b64encode(buf.read()).decode("ascii")
     plt.close(fig)
@@ -342,6 +425,28 @@ def _embed(out: io.StringIO, fig: plt.Figure, caption: str, fig_id: str = "") ->
     out.write(f'<figcaption style="color:{SUBTEXT};font-size:0.84em;'
               f'font-style:italic;margin-top:0.4em;line-height:1.5">'
               f'{caption}</figcaption>\n</figure>\n\n')
+
+
+def _embed_placeholder(out: io.StringIO, title: str, detail: str, caption: str, fig_id: str = "") -> None:
+    fig, ax = plt.subplots(figsize=(11.2, 4.2) if LIGHT else (10.2, 4.0))
+    fig.patch.set_facecolor(BG)
+    ax.set_facecolor(AX_BG)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_edgecolor(EDGE)
+        spine.set_linewidth(1.0)
+    ax.text(0.5, 0.60, title,
+            transform=ax.transAxes,
+            ha="center", va="center",
+            fontsize=_article_size(12.5 if LIGHT else 12),
+            fontweight="700", color=TEXT)
+    ax.text(0.5, 0.38, detail,
+            transform=ax.transAxes,
+            ha="center", va="center",
+            fontsize=_article_size(8.8 if LIGHT else 8.5),
+            color=SUBTEXT, linespacing=1.45)
+    _embed(out, fig, caption, fig_id)
 
 
 def _callout(out: io.StringIO, kind: str, text: str) -> None:
@@ -440,7 +545,7 @@ def fig_temporal(out: io.StringIO) -> None:
     colour_other   = ACCENT if not LIGHT else "#3a7bd5"
     colour_chatgpt = C_PALETTE[1]
 
-    fig, ax = plt.subplots(figsize=(9, 5))
+    fig, ax = plt.subplots(figsize=(11.0, 6.3) if LIGHT else (9, 5))
 
     bars_other   = ax.bar(x, n_other,   width=width, color=colour_other,   alpha=0.75,
                           label="Sem menção explícita a ChatGPT/GenAI", zorder=3, edgecolor="none")
@@ -450,24 +555,25 @@ def fig_temporal(out: io.StringIO) -> None:
     # Annotate bar tops with total N and % ChatGPT
     for xi, (nt, pct) in enumerate(zip(n_total, pct_chatgpt)):
         ax.text(xi, nt + 1.5, f"{nt}\n({pct:.0f}%)", ha="center", va="bottom",
-                fontsize=8, color=TEXT, fontweight="600", linespacing=1.3)
+                fontsize=_article_size(8.6), color=TEXT, fontweight="600", linespacing=1.3)
 
     # Rupture shading — dynamic
     _idx_2022 = years_plot.index(2022) if 2022 in years_plot else None
     if _idx_2022 is not None:
         ax.axvspan(_idx_2022 - 0.35, _idx_2022 + 1.35, color=RED, alpha=0.07, zorder=1)
         ax.text(_idx_2022 + 0.5, max(n_total) * 0.88, "ChatGPT\n(nov 2022)", ha="center", va="top",
-                fontsize=8, color=RED, fontstyle="italic", fontweight="600")
+                fontsize=_article_size(8.5), color=RED, fontstyle="italic", fontweight="600")
 
     ax.set_xticks(x)
     ax.set_xticklabels([str(y) for y in years_plot])
     ax.set_ylabel("Artigos publicados", color=TEXT, labelpad=10)
     ax.set_ylim(0, max(n_total) * 1.22)
-    ax.set_title(f"Produção Científica Anual ({years_plot[0]}–{years_plot[-1]})", fontsize=13, fontweight="700",
+    ax.tick_params(axis="both", labelsize=_article_size(9.6))
+    ax.set_title(f"Produção Científica Anual ({years_plot[0]}–{years_plot[-1]})", fontsize=_article_size(14), fontweight="700",
                  color=TEXT, pad=16)
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
-    ax.legend(loc="upper left", framealpha=0.85)
+    ax.legend(loc="upper left", framealpha=0.88, fontsize=_article_size(9.6))
 
     fig.tight_layout()
     _embed(out, fig,
@@ -530,7 +636,7 @@ def fig_cluster_composition(out: io.StringIO) -> None:
 
     x = np.array(years, dtype=float)
 
-    fig, ax = plt.subplots(figsize=(11, 5.5))
+    fig, ax = plt.subplots(figsize=(12.4, 6.5) if LIGHT else (11, 5.5))
 
     # stackplot — draws filled areas directly
     ys = [counts[:, ci] for ci in range(len(cluster_cols))]
@@ -548,12 +654,12 @@ def fig_cluster_composition(out: io.StringIO) -> None:
     total_n = counts.sum(axis=1)
     for i, (yr, n) in enumerate(zip(years, total_n)):
         ax.text(yr, n + 4, f"n={int(round(n))}", ha="center", va="bottom",
-                fontsize=8, color=SUBTEXT)
+                fontsize=_article_size(8.5), color=SUBTEXT)
 
     # ChatGPT rupture line
     ax.axvline(2022.92, color=RED, lw=1.2, ls=":", alpha=0.8)
     ax.text(2022.85, total_n.max() * 0.55, "ChatGPT\nnov 2022",
-            color=TEXT, fontsize=7.5, fontstyle="italic",
+            color=TEXT, fontsize=_article_size(8.0), fontstyle="italic",
             va="center", ha="right",
             bbox=dict(boxstyle="round,pad=0.25", facecolor=BG,
                       edgecolor=RED, linewidth=0.8, alpha=0.85))
@@ -563,14 +669,15 @@ def fig_cluster_composition(out: io.StringIO) -> None:
     ax.set_xticks(years)
     ax.set_xticklabels([str(y) for y in years])
     ax.set_ylabel("N de artigos", color=TEXT, labelpad=8)
+    ax.tick_params(axis="both", labelsize=_article_size(9.6))
     ax.set_title("Crescimento e Composição Temática por Ano",
-                 fontsize=13, fontweight="700", color=TEXT, pad=16)
+                 fontsize=_article_size(14), fontweight="700", color=TEXT, pad=16)
     ax.set_axisbelow(True)
     ax.grid(axis="y", alpha=0.35, lw=0.6)
 
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc="upper left",
-              fontsize=8.5, ncol=1, framealpha=0.9)
+              fontsize=_article_size(9.0), ncol=1, framealpha=0.92)
 
     fig.tight_layout()
     _embed(out, fig,
@@ -700,6 +807,8 @@ def fig_geo_countries(out: io.StringIO) -> None:
         (1.00, "#1f4c8f" if LIGHT else "#bcd7ff"),
     ]
 
+    map_background = "rgba(0,0,0,0)" if LIGHT else AX_BG
+
     map_fig = go.Figure(
         go.Choropleth(
             locations=geo["iso3"],
@@ -727,54 +836,100 @@ def fig_geo_countries(out: io.StringIO) -> None:
         oceancolor="#eef3f7" if LIGHT else "#161c2c",
         showlakes=True,
         lakecolor="#eef3f7" if LIGHT else "#161c2c",
-        bgcolor=AX_BG,
+        bgcolor=map_background,
     )
     map_fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor=AX_BG,
-        plot_bgcolor=AX_BG,
-        font=dict(color=TEXT, size=10),
+        paper_bgcolor=map_background,
+        plot_bgcolor=map_background,
+        font=dict(color=TEXT, size=_article_size(10)),
     )
-    map_png = pio.to_image(
-        map_fig,
-        format="png",
-        width=1280 if LIGHT else 1180,
-        height=780,
-        scale=2,
-    )
-    map_image = np.asarray(Image.open(io.BytesIO(map_png)).convert("RGBA"))
+    map_image = None
+    map_export_failed = False
+    try:
+        map_png = pio.to_image(
+            map_fig,
+            format="png",
+            width=1600 if LIGHT else 1180,
+            height=920 if LIGHT else 780,
+            scale=2,
+        )
+        map_image = np.asarray(Image.open(io.BytesIO(map_png)).convert("RGBA"))
+    except Exception as exc:
+        map_image = _render_plotly_via_edge_screenshot(
+            map_fig,
+            width=1600 if LIGHT else 1180,
+            height=920 if LIGHT else 780,
+            bg=map_background,
+        )
+        if map_image is None:
+            map_export_failed = True
+            print(f"  Fig 4  geographic map fallback… ({type(exc).__name__})", file=sys.stderr)
+        else:
+            print(f"  Fig 4  geographic map browser screenshot fallback… ({type(exc).__name__})", file=sys.stderr)
 
     fig, (ax_map, ax_bar) = plt.subplots(
         1,
         2,
-        figsize=(15.4, 6.4),
+        figsize=(17.4, 7.8) if LIGHT else (15.4, 6.4),
         gridspec_kw={"width_ratios": [1.85, 1.0]},
     )
     fig.patch.set_facecolor(BG)
 
     ax_map.set_facecolor(AX_BG)
-    ax_map.imshow(map_image)
-    ax_map.set_axis_off()
-    ax_map.set_title("Ocorrências por país",
-                     fontsize=11.5, fontweight="700", color=TEXT, pad=10)
+    if map_image is not None:
+        ax_map.imshow(map_image)
+        ax_map.set_axis_off()
+        ax_map.set_title("Ocorrências por país",
+                         fontsize=_article_size(12.2), fontweight="700", color=TEXT, pad=10)
 
-    cbar_cmap = mcolors.LinearSegmentedColormap.from_list("geo_occ_scale", map_colorscale)
-    cbar_norm = mcolors.Normalize(
-        vmin=float(geo["log_n"].min()),
-        vmax=float(geo["log_n"].max()),
-    )
-    cbar_ax = ax_map.inset_axes([0.22, 0.045, 0.56, 0.045])
-    cbar = fig.colorbar(
-        ScalarMappable(norm=cbar_norm, cmap=cbar_cmap),
-        cax=cbar_ax,
-        orientation="horizontal",
-    )
-    cbar.set_ticks([float(np.log1p(value)) for value in tick_counts])
-    cbar.set_ticklabels([f"{value:,}" for value in tick_counts])
-    cbar.outline.set_visible(False)
-    cbar.ax.tick_params(axis="x", labelsize=8.8, colors=TEXT, length=0, pad=1)
-    cbar.ax.set_title("Ocorrências por país (escala log)", fontsize=9.2, color=TEXT, pad=8)
-    cbar_ax.set_facecolor(AX_BG)
+        cbar_cmap = mcolors.LinearSegmentedColormap.from_list("geo_occ_scale", map_colorscale)
+        cbar_norm = mcolors.Normalize(
+            vmin=float(geo["log_n"].min()),
+            vmax=float(geo["log_n"].max()),
+        )
+        cbar_ax = ax_map.inset_axes([0.22, 0.045, 0.56, 0.045])
+        cbar = fig.colorbar(
+            ScalarMappable(norm=cbar_norm, cmap=cbar_cmap),
+            cax=cbar_ax,
+            orientation="horizontal",
+        )
+        cbar.set_ticks([float(np.log1p(value)) for value in tick_counts])
+        cbar.set_ticklabels([f"{value:,}" for value in tick_counts])
+        cbar.outline.set_visible(False)
+        cbar.ax.tick_params(axis="x", labelsize=_article_size(9.2), colors=TEXT, length=0, pad=1)
+        cbar.ax.set_title("Ocorrências por país (escala log)", fontsize=_article_size(9.7), color=TEXT, pad=8)
+        cbar_ax.set_facecolor(AX_BG)
+    else:
+        ax_map.set_xticks([])
+        ax_map.set_yticks([])
+        for spine in ax_map.spines.values():
+            spine.set_edgecolor(EDGE)
+            spine.set_linewidth(0.9)
+        ax_map.set_title("Cobertura geográfica do corpus",
+                         fontsize=_article_size(12.2), fontweight="700", color=TEXT, pad=10)
+        ax_map.text(0.5, 0.78, f"{represented}", transform=ax_map.transAxes,
+                    ha="center", va="center", fontsize=_article_size(30),
+                    color=ACCENT, fontweight="700")
+        ax_map.text(0.5, 0.68, "países representados", transform=ax_map.transAxes,
+                    ha="center", va="center", fontsize=_article_size(12.5),
+                    color=TEXT, fontweight="600")
+        ax_map.text(0.12, 0.53, "Maiores polos", transform=ax_map.transAxes,
+                    ha="left", va="center", fontsize=_article_size(11.0),
+                    color=TEXT, fontweight="700")
+        top_lines = [
+            f"{row.country_name}: {int(row.n):,} ({row.pct:.1f}%)"
+            for row in top3.itertuples(index=False)
+        ]
+        ax_map.text(0.12, 0.38, "\n".join(top_lines), transform=ax_map.transAxes,
+                    ha="left", va="center", fontsize=_article_size(10.1),
+                    color=TEXT, linespacing=1.5)
+        ax_map.text(0.5, 0.14,
+                    "Mapa estático indisponível nesta execução.\n"
+                    "O ranking à direita preserva a leitura quantitativa.",
+                    transform=ax_map.transAxes, ha="center", va="center",
+                    fontsize=_article_size(9.6), color=SUBTEXT,
+                    bbox=dict(facecolor=BG, edgecolor=EDGE, boxstyle="round,pad=0.5", alpha=0.94))
 
     ax_bar.set_facecolor(AX_BG)
     base_bar = "#c0cde0" if LIGHT else "#5e6f91"
@@ -790,15 +945,15 @@ def fig_geo_countries(out: io.StringIO) -> None:
         ax_bar.text(bar.get_width() + max_n * 0.018,
                     bar.get_y() + bar.get_height() / 2,
                     f"{int(row.n):,}  ({row.pct:.1f}%)",
-                    va="center", fontsize=8.6, color=TEXT, fontweight="600")
+                    va="center", fontsize=_article_size(9.1), color=TEXT, fontweight="600")
 
     ax_bar.set_yticks(y)
-    ax_bar.set_yticklabels(top10["display"], fontsize=9)
+    ax_bar.set_yticklabels(top10["display"], fontsize=_article_size(9.4))
     ax_bar.invert_yaxis()
     ax_bar.set_xlim(0, max_n * 1.32)
     ax_bar.set_xlabel("Ocorrências no campo countries", color=TEXT, labelpad=8)
     ax_bar.set_title("Top 10 países\n(por ocorrências de afiliação)",
-                     fontsize=11.5, fontweight="700", color=TEXT, pad=10)
+                     fontsize=_article_size(12.2), fontweight="700", color=TEXT, pad=10)
     ax_bar.grid(axis="x", color=GRID, lw=0.6, zorder=0)
     ax_bar.set_axisbelow(True)
     ax_bar.spines["left"].set_visible(False)
@@ -806,23 +961,30 @@ def fig_geo_countries(out: io.StringIO) -> None:
     ax_bar.spines["right"].set_visible(False)
     ax_bar.spines["bottom"].set_edgecolor(SPINE)
     ax_bar.tick_params(axis="y", length=0)
-    ax_bar.tick_params(axis="x", colors=SUBTEXT)
+    ax_bar.tick_params(axis="x", colors=SUBTEXT, labelsize=_article_size(9.5))
     ax_bar.text(0.98, 0.02,
                 f"{represented} países\nTop 10 = {top10_share:.1f}%\ndas ocorrências",
                 transform=ax_bar.transAxes,
                 ha="right", va="bottom",
-                fontsize=8.4, color=SUBTEXT,
+                fontsize=_article_size(8.8), color=SUBTEXT,
                 bbox=dict(facecolor=BG, edgecolor=EDGE, boxstyle="round,pad=0.35", alpha=0.92))
 
     fig.suptitle("Distribuição Geográfica do Corpus — Mapa + Top 10 Países",
-                 fontsize=12.8, fontweight="700", color=TEXT, y=1.01)
+                 fontsize=_article_size(13.6), fontweight="700", color=TEXT, y=1.01)
     fig.tight_layout()
     _embed(out, fig,
-            f"Fig 4 — Painel duplo da distribuição geográfica do corpus. Esquerda: mapa mundial por país "
-           f"com escala logarítmica de ocorrências por país a partir do campo countries. Direita: Top 10 países "
-           f"por número de ocorrências, com rótulos de N e %. A contagem não é mutuamente exclusiva: artigos "
-           f"multinacionais contribuem para mais de um país. País líder: {top_ranked.iloc[0]['country_name']} "
-           f"({int(top_ranked.iloc[0]['n']):,} ocorrências).",
+            (
+                f"Fig 4 — Painel duplo da distribuição geográfica do corpus. Esquerda: mapa mundial por país "
+                f"com escala logarítmica de ocorrências por país a partir do campo countries. Direita: Top 10 países "
+                f"por número de ocorrências, com rótulos de N e %. A contagem não é mutuamente exclusiva: artigos "
+                f"multinacionais contribuem para mais de um país. País líder: {top_ranked.iloc[0]['country_name']} "
+                f"({int(top_ranked.iloc[0]['n']):,} ocorrências)."
+            ) if not map_export_failed else (
+                f"Fig 4 — Painel duplo da distribuição geográfica do corpus. Esquerda: resumo da cobertura geográfica "
+                f"({represented} países representados e maiores polos institucionais). Direita: Top 10 países por número "
+                f"de ocorrências, com rótulos de N e %. País líder: {top_ranked.iloc[0]['country_name']} "
+                f"({int(top_ranked.iloc[0]['n']):,} ocorrências)."
+            ),
            "fig04")
 
 
@@ -861,7 +1023,7 @@ def fig_bradford(out: io.StringIO) -> None:
     # zone_boundaries: [end_of_zone1_rank, end_of_zone2_rank]
     zone_boundaries = [boundary_z1, boundary_z2]
 
-    fig, ax = plt.subplots(figsize=(10, 5.5))
+    fig, ax = plt.subplots(figsize=(11.5, 6.5) if LIGHT else (10, 5.5))
     fig.patch.set_facecolor(BG)
     ax.set_facecolor(AX_BG)
 
@@ -888,14 +1050,15 @@ def fig_bradford(out: io.StringIO) -> None:
         cum_start = journals_sorted.loc[journals_sorted["rank"] <= z_start, "cum_n"].max() if z_start > 1 else 0
         y_label = (cum_start + cum_end) / 2
         ax.text(mid_log, y_label, zone_labels[i],
-                ha="center", va="center", fontsize=8, color=TEXT,
+                ha="center", va="center", fontsize=_article_size(8.6), color=TEXT,
                 bbox=dict(facecolor=AX_BG, edgecolor=EDGE, boxstyle="round,pad=0.3",
                           alpha=0.85, linewidth=0.7))
 
     ax.set_xlabel("Rank do Periódico (escala log₁₀)", color=TEXT, labelpad=10)
     ax.set_ylabel("Artigos Acumulados", color=TEXT, labelpad=10)
     ax.set_title("Lei de Bradford — Dispersão da Produção por Periódicos (2020–2026)",
-                 fontsize=13, fontweight="700", color=TEXT, pad=16)
+                 fontsize=_article_size(13.8), fontweight="700", color=TEXT, pad=16)
+    ax.tick_params(axis="both", labelsize=_article_size(9.5))
     ax.set_axisbelow(True)
     ax.grid(alpha=0.35)
     ax.spines["top"].set_visible(False)
@@ -904,7 +1067,7 @@ def fig_bradford(out: io.StringIO) -> None:
     # Legend patches
     legend_items = [mpatches.Patch(color=zone_colours[z], alpha=0.55, label=zone_labels[z])
                     for z in (1, 2, 3)]
-    ax.legend(handles=legend_items, loc="upper left", fontsize=8.5, framealpha=0.9)
+    ax.legend(handles=legend_items, loc="upper left", fontsize=_article_size(8.9), framealpha=0.92)
     fig.tight_layout()
 
     _z1n = journals[journals["bradford_zone"] == 1]
@@ -932,7 +1095,7 @@ def fig_umap(out: io.StringIO) -> None:
     df = pd.read_csv(ROOT / "corpus_clustered.csv",
                      usecols=["umap_x", "umap_y", "cluster", "cited_by_count"])
     df["cited_by_count"] = pd.to_numeric(df["cited_by_count"], errors="coerce").fillna(0)
-    df["s"] = 8 + np.log1p(df["cited_by_count"]) * 3.5
+    df["s"] = 10 + np.log1p(df["cited_by_count"]) * 4.2
     n_clusters = df["cluster"].nunique()
 
     _callout(out, "method",
@@ -945,7 +1108,7 @@ def fig_umap(out: io.StringIO) -> None:
              "corpus estreito, todos sobre IA aplicada à produção/escrita acadêmica e clínica. "
              "Pontos maiores = artigos mais citados. Estrelas = mais citado por cluster.")
 
-    fig, ax = plt.subplots(figsize=(9, 7))
+    fig, ax = plt.subplots(figsize=(10.4, 8.0) if LIGHT else (9, 7))
 
     for c in range(n_clusters):
         mask = df["cluster"] == c
@@ -957,10 +1120,10 @@ def fig_umap(out: io.StringIO) -> None:
         # Centroid label
         cx, cy = sub["umap_x"].mean(), sub["umap_y"].mean()
         ax.text(cx, cy, f"C{c}", ha="center", va="center",
-                fontsize=8, fontweight="700",
+            fontsize=_article_size(9), fontweight="700",
                 color=C_PALETTE[c], zorder=6,
                 bbox=dict(facecolor=BG, edgecolor=C_PALETTE[c],
-                          boxstyle="round,pad=0.2", alpha=0.75, linewidth=0.8))
+                          boxstyle="round,pad=0.26", alpha=0.8, linewidth=0.9))
 
     # Confidence ellipses per cluster
     from matplotlib.patches import Ellipse
@@ -992,7 +1155,7 @@ def fig_umap(out: io.StringIO) -> None:
         if sub_c["cited_by_count"].max() > 0:
             top_idx = sub_c["cited_by_count"].idxmax()
             ax.scatter(df.loc[top_idx, "umap_x"], df.loc[top_idx, "umap_y"],
-                       s=180, marker="*", color=C_PALETTE[c], zorder=7,
+                       s=220, marker="*", color=C_PALETTE[c], zorder=7,
                        edgecolors=TEXT, linewidths=0.6)
     star_proxy = _mlines.Line2D([], [], marker="*", color="none",
                                 markeredgecolor=TEXT, markerfacecolor="gray",
@@ -1000,11 +1163,12 @@ def fig_umap(out: io.StringIO) -> None:
 
     ax.set_xlabel("UMAP dimensão 1", color=TEXT, labelpad=10)
     ax.set_ylabel("UMAP dimensão 2", color=TEXT, labelpad=10)
-    ax.set_title(f"Mapa Semântico UMAP — {len(df)} Artigos / {n_clusters} Clusters", fontsize=13,
+    ax.tick_params(axis="both", labelsize=_article_size(9.6))
+    ax.set_title(f"Mapa Semântico UMAP — {len(df)} Artigos / {n_clusters} Clusters", fontsize=_article_size(14.2),
                  fontweight="700", color=TEXT, pad=16)
     handles, hlabels = ax.get_legend_handles_labels()
     ax.legend(handles + [star_proxy], hlabels + [star_proxy.get_label()],
-              loc="upper left", fontsize=8.5, markerscale=1.4, framealpha=0.9)
+              loc="upper left", fontsize=_article_size(8.9), markerscale=1.5, framealpha=0.92)
     ax.set_axisbelow(True)
     fig.tight_layout()
     _embed(out, fig,
@@ -1015,36 +1179,38 @@ def fig_umap(out: io.StringIO) -> None:
 
 
 def fig_scatter_ea(out: io.StringIO) -> None:
-    """Fig 7 — Semantic scatter Axis E × Axis N, the central finding."""
-    _section_break(out, "Eixos Semânticos — Projeção E × N")
-    out.write("## Fig 7 — Mapa de Eixos Semânticos (E × N)\n\n")
+    """Fig 7 — Semantic scatter Axis G × Axis E, the central finding."""
+    _section_break(out, "Eixos Semânticos — Projeção G × E")
+    out.write("## Fig 7 — Mapa de Eixos Semânticos (G × E)\n\n")
 
     _callout(out, "question",
-             "O corpus distribui-se entre artigos de postura otimista (oportunidade/adoção) e artigos de postura "
-             "crítica (risco/governança) — e essa dimensão interage com o enquadramento tecnológico "
-             "(ChatGPT/GenAI vs. IA genérica)?")
+             "O corpus distribui-se entre artigos orientados a uso/ferramentas e artigos orientados a "
+             "guardrails, governança e integridade — e essa dimensão interage com o enquadramento tecnológico "
+             "(ChatGPT/GenAI vs. IA Convencional)?")
     _callout(out, "method",
-             "Projeção de cada resumo nos Eixos E (enquadramento tecnológico) e N (postura). "
-             "Eixo E: produto interno embedding × (polo ChatGPT − polo IA genérica). "
-             "Eixo N: produto interno × (polo risco/governança − polo oportunidade/adoção). "
+             "Projeção de cada resumo nos Eixos G (guardrails) e E (enquadramento tecnológico). "
+             "Eixo E: produto interno embedding × (polo ChatGPT − polo IA Convencional). "
+             "Eixo G: contraste entre conjuntos de protótipos textuais escritos à mão para artigos de workflow/escrita "
+             "e artigos de guardrails, integridade, disclosure e governança no contexto acadêmico, com zero no ponto médio entre esses conjuntos. "
              "Tamanho dos pontos: log(1 + citações). Cores por cluster KMeans. "
-             "As linhas em zero separam os quatro quadrantes interpretativos do espaço semântico.")
+             "As linhas em zero funcionam como referência visual, e a estrela de cada cor marca o centróide do respectivo cluster.")
     _callout(out, "read",
-             "Artigos com postura de risco/governança (Eixo N positivo) tendem a concentrar-se no lado ChatGPT/GenAI do plano E×N, "
-             "sobretudo nos clusters de integridade acadêmica. Mas esta projeção é semântica, não causal: "
+             "No plano G×E, o contraste entre workflow/escrita e guardrails aparece sobretudo dentro do campo focal C3+C4, "
+             "com C4 mais próximo do polo positivo de guardrails e C3 mais espalhado ao redor do centro. "
+             "Mas esta projeção é semântica, não causal: "
              "o teste temporal da Fig 8 mostra que o efeito agregado do Eixo E é instável quando o corpus é estratificado por coorte.")
 
     df = pd.read_csv(IND / "axis_scores_enriched.csv")
     df["cited_by_count"] = pd.to_numeric(df["cited_by_count"], errors="coerce").fillna(0)
-    df["s"] = 7 + np.log1p(df["cited_by_count"]) * 3.5
+    df["s"] = 8.5 + np.log1p(df["cited_by_count"]) * 4.0
     n_clusters_ea = df["cluster"].nunique()
 
-    fig, ax = plt.subplots(figsize=(9, 7))
+    fig, ax = plt.subplots(figsize=(11.6, 9.0) if LIGHT else (9.4, 7.4))
 
     for c in range(n_clusters_ea):
         mask = df["cluster"] == c
         sub = df[mask]
-        ax.scatter(sub["axis_e_technology"], sub["axis_n_domain"],
+        ax.scatter(sub["axis_g_guardrails"], sub["axis_e_technology"],
                    c=C_PALETTE[c], s=sub["s"], alpha=0.45,
                    edgecolors="none", zorder=3, label=_compact_cluster_legend_label(c),
                    rasterized=True)
@@ -1053,74 +1219,35 @@ def fig_scatter_ea(out: io.StringIO) -> None:
     ax.axhline(0, color=SPINE, lw=1.0, ls="-", alpha=0.8, zorder=2)
     ax.axvline(0, color=SPINE, lw=1.0, ls="-", alpha=0.8, zorder=2)
 
-    # Quadrant labels
-    ax.autoscale()
-    x0, x1 = ax.get_xlim(); y0, y1 = ax.get_ylim()
-    q_style = dict(fontsize=7.5, color=SUBTEXT, fontstyle="italic",
-                   ha="center", va="center")
-    q_offset_x = (x1 - x0) * 0.20
-    q_offset_y = (y1 - y0) * 0.13
-    for qx, qy, label in [
-        (x0 + q_offset_x, y1 - q_offset_y, "IA genérica\n→ risco/govern."),
-        (x1 - q_offset_x, y1 - q_offset_y, "ChatGPT/GenAI\n→ risco/govern."),
-        (x0 + q_offset_x, y0 + q_offset_y, "IA genérica\n→ oportunidade"),
-        (x1 - q_offset_x, y0 + q_offset_y, "ChatGPT/GenAI\n→ oportunidade"),
-    ]:
-        ax.text(qx, qy, label, **q_style,
-                bbox=dict(facecolor=BG, edgecolor=EDGE, boxstyle="round,pad=0.3",
-                          alpha=0.55, linewidth=0.6), zorder=2)
-
-    # 0: Blue, 1: Orange, 2: Green, 3: Purple, 4: Yellow
-    _label_layout = {
-        0: {"offset": (96, -24),  "ha": "left",  "va": "top",    "rad": 0.08},
-        1: {"offset": (84, 52),   "ha": "left",  "va": "bottom", "rad": 0.10},
-        2: {"offset": (-18, 40),  "ha": "left",  "va": "bottom", "rad": 0.10},
-        3: {"offset": (116, 64),  "ha": "right", "va": "bottom", "rad": 0.08},
-        4: {"offset": (8, -62),   "ha": "left",  "va": "top",    "rad": 0.10},
-    }
     import matplotlib.lines as _mlines6
     for c in range(n_clusters_ea):
         sub_c = df[df["cluster"] == c]
-        if sub_c["cited_by_count"].max() > 0:
-            top_idx = sub_c["cited_by_count"].idxmax()
-            row = df.loc[top_idx]
-            xe, xn = row["axis_e_technology"], row["axis_n_domain"]
-            ax.scatter(xe, xn, s=180, marker="*", color=C_PALETTE[c], zorder=7,
-                       edgecolors=TEXT, linewidths=0.6)
-            layout = _label_layout.get(c, {"offset": (90, 36), "ha": "left", "va": "bottom", "rad": 0.0})
-            off_x, off_y = layout["offset"]
-            ax.annotate(
-                f"C{c} · mais citado\n{int(row['cited_by_count'])} citações",
-                xy=(xe, xn), xycoords="data",
-                xytext=(off_x, off_y), textcoords="offset points",
-                fontsize=6.5, color=TEXT, ha=layout["ha"], va=layout["va"],
-                arrowprops=dict(arrowstyle="-", color=SUBTEXT, lw=0.6,
-                                shrinkA=0, shrinkB=4,
-                                connectionstyle=f"arc3,rad={layout['rad']}"),
-                bbox=dict(facecolor=BG, edgecolor=C_PALETTE[c],
-                          boxstyle="round,pad=0.25", alpha=0.92, linewidth=0.8),
-                zorder=8,
-            )
+        if not sub_c.empty:
+            xe = float(sub_c["axis_e_technology"].mean())
+            xg = float(sub_c["axis_g_guardrails"].mean())
+            ax.scatter(xg, xe, s=300 if LIGHT else 240, marker="*", color=C_PALETTE[c], zorder=7,
+                       edgecolors=TEXT, linewidths=0.9)
     star_proxy6 = _mlines6.Line2D([], [], marker="*", color="none",
                                    markeredgecolor=TEXT, markerfacecolor="gray",
-                                   markersize=10, label="Mais citado")
+                                   markersize=12, label="Centróide do cluster")
 
-    ax.set_xlabel("Eixo E — IA genérica (−) → ChatGPT/GenAI (+)", color=TEXT, labelpad=10)
-    ax.set_ylabel("Eixo N — Oportunidade/Adoção (−) → Risco/Governança (+)", color=TEXT, labelpad=10)
-    ax.set_title("Mapa Semântico E × N — Enquadramento Tecnológico vs. Postura", fontsize=13,
-                 fontweight="700", color=TEXT, pad=16)
+    ax.set_xlabel("Workflow e Escrita Assistida (-)  Eixo G  (+) Guardrails e Governança", fontsize=_article_size(13), color=TEXT, labelpad=12)
+    ax.set_ylabel("IA Convencional (-)  Eixo E  (+) IA Generativa", fontsize=_article_size(13), color=TEXT, labelpad=12)
+    ax.tick_params(axis="both", labelsize=_article_size(10.8))
+    ax.set_title("Mapa Semântico G × E — Guardrails vs. Enquadramento Tecnológico", fontsize=_article_size(15.2),
+                 fontweight="700", color=TEXT, pad=18)
     handles6, hlabels6 = ax.get_legend_handles_labels()
     ax.legend(handles6 + [star_proxy6], hlabels6 + [star_proxy6.get_label()],
               loc="upper center", bbox_to_anchor=(0.5, -0.13),
-              fontsize=8.0, markerscale=1.25, framealpha=0.9, ncol=3,
-              columnspacing=1.1, handletextpad=0.45, borderpad=0.4, labelspacing=0.6)
+              fontsize=_article_size(9.4), markerscale=1.35, framealpha=0.94, ncol=3,
+              columnspacing=1.2, handletextpad=0.5, borderpad=0.45, labelspacing=0.7)
     ax.set_axisbelow(True)
     fig.tight_layout(rect=[0, 0.11, 1, 1])
     _embed(out, fig,
-            "Fig 7 — Projeção de artigos nos Eixos E (enquadramento tecnológico) × N (postura). "
+            "Fig 7 — Projeção de artigos nos Eixos G e E. "
             "O tamanho dos pontos é proporcional a log(1 + citações) e as cores representam os clusters KMeans. "
-           "Estrela = artigo mais citado de cada cluster. A figura mostra afinidades semânticas entre enquadramento tecnológico "
-            "e postura, mas a leitura de impacto deve ser complementada pelo teste de sensibilidade temporal da Fig 8.",
+           "Estrela = centróide de cada cluster. "
+            "A figura mostra como o foco em guardrails se distribui em relação ao enquadramento tecnológico, mas a leitura de impacto deve ser complementada pelo teste de sensibilidade temporal da Fig 8.",
            "fig06")
 
 
@@ -1157,8 +1284,8 @@ def fig_axis_e_citations(out: io.StringIO) -> None:
     df = pd.read_csv(IND / "axis_scores_enriched.csv")
     df["cited_by_count"] = pd.to_numeric(df["cited_by_count"], errors="coerce").fillna(0)
 
-    df["quartile"] = pd.qcut(df["axis_e_technology"], 4, labels=["Q1\nIA genérica", "Q2", "Q3", "Q4\nChatGPT/GenAI"])
-    q_order = ["Q1\nIA genérica", "Q2", "Q3", "Q4\nChatGPT/GenAI"]
+    df["quartile"] = pd.qcut(df["axis_e_technology"], 4, labels=["Q1\nIA Convencional", "Q2", "Q3", "Q4\nChatGPT/GenAI"])
+    q_order = ["Q1\nIA Convencional", "Q2", "Q3", "Q4\nChatGPT/GenAI"]
     q_colours = [C_PALETTE[0], "#7ab0e0", "#e09050", C_PALETTE[1]]
 
     fig, (ax, ax_band) = plt.subplots(1, 2, figsize=(12, 5.8), gridspec_kw={"width_ratios": [1.25, 1]})
@@ -1218,7 +1345,7 @@ def fig_axis_e_citations(out: io.StringIO) -> None:
     _band_plot = _diag7.copy().set_index("label").loc[["Geral", "2020-2022", "2023-2024", "2025-2026"]].reset_index()
     y = np.arange(len(_band_plot))
     ax_band.hlines(y, _band_plot["med_q1"], _band_plot["med_q4"], color=SUBTEXT, lw=2.0, alpha=0.65, zorder=2)
-    ax_band.scatter(_band_plot["med_q1"], y, color=C_PALETTE[0], s=52, zorder=4, label="Q1 · IA genérica")
+    ax_band.scatter(_band_plot["med_q1"], y, color=C_PALETTE[0], s=52, zorder=4, label="Q1 · IA Convencional")
     ax_band.scatter(_band_plot["med_q4"], y, color=C_PALETTE[1], s=52, zorder=4, label="Q4 · ChatGPT/GenAI")
     for yi, row in enumerate(_band_plot.itertuples(index=False)):
         ax_band.text(max(row.med_q1, row.med_q4) + 1.6, yi, f"ρE={row.rho_e:+.3f}",
@@ -1569,37 +1696,46 @@ def fig_orthogonality(out: io.StringIO) -> None:
     out.write("## Fig 11 — Matriz de Ortogonalidade dos Eixos Semânticos\n\n")
 
     _callout(out, "question",
-             "Os três eixos selecionados medem dimensões independentes, "
+             "Os quatro eixos selecionados medem dimensões independentes, "
              "ou há redundância entre eles?")
     _callout(out, "method",
              "Correlação de Pearson entre os vetores de pontuação dos artigos para cada par de eixos. "
-             "Mapa de calor 3×3 com escala divergente RdBu: azul = ortogonal, vermelho = correlacionado. "
+             "Mapa de calor 4×4 com escala divergente RdBu: azul = ortogonal, vermelho = correlacionado. "
              "Limiar de correlação aceitável: |r| < 0.40.")
     _callout(out, "read",
-             "Eixos E, N e R foram redesenhados com polos adequados ao domínio do corpus. "
-             "A ortogonalidade entre pares confirma que cada eixo captura uma dimensão independente: "
-             "enquadramento tecnológico, postura (oportunidade vs. risco/governança) e domínio (acadêmico vs. clínico).")
+             "Eixos E, G, N e R capturam dimensões distintas do corpus. "
+             "Em particular, G introduz um contraste mais próximo da tese substantiva do artigo: uso/ferramentas versus guardrails/governança. "
+             "A ortogonalidade observada ajuda a separar enquadramento tecnológico, guardrails, postura retórica e domínio temático.")
 
     df = pd.read_csv(IND / "axis_scores_enriched.csv")
     df["cited_by_count"] = pd.to_numeric(df["cited_by_count"], errors="coerce").fillna(0)
-    _corr = df[["axis_e_technology", "axis_n_domain", "axis_r_scope"]].corr(method="pearson")
+    _corr = df[["axis_e_technology", "axis_g_guardrails", "axis_n_domain", "axis_r_scope"]].corr(method="pearson")
+    r_eg = _corr.loc["axis_e_technology", "axis_g_guardrails"]
     r_en = _corr.loc["axis_e_technology", "axis_n_domain"]
     r_er = _corr.loc["axis_e_technology", "axis_r_scope"]
+    r_gn = _corr.loc["axis_g_guardrails", "axis_n_domain"]
+    r_gr = _corr.loc["axis_g_guardrails", "axis_r_scope"]
     r_nr = _corr.loc["axis_n_domain", "axis_r_scope"]
 
     corr = np.array([
-        [1.000,  r_en,  r_er],
-        [ r_en, 1.000,  r_nr],
-        [ r_er,  r_nr, 1.000],
+        [1.000,  r_eg,  r_en,  r_er],
+        [ r_eg, 1.000,  r_gn,  r_gr],
+        [ r_en,  r_gn, 1.000,  r_nr],
+        [ r_er,  r_gr,  r_nr, 1.000],
     ])
-    labels = ["E\n(Enquadramento\nTecnológico)", "N\n(Postura:\nOport.→Risco)", "R\n(Domínio:\nAcad.→Clínico)"]
+    labels = [
+        "E\n(Enquadramento\nTecnológico)",
+        "G\n(Guardrails:\nUso→Governança)",
+        "N\n(Postura:\nOport.→Risco)",
+        "R\n(Domínio:\nAcad.→Clínico)",
+    ]
 
-    fig, ax = plt.subplots(figsize=(6, 5))
+    fig, ax = plt.subplots(figsize=(7.2, 5.8))
     im = ax.imshow(corr, cmap="RdBu_r", vmin=-1, vmax=1, aspect="auto")
 
     _cmap = plt.get_cmap("RdBu_r")
-    for i in range(3):
-        for j in range(3):
+    for i in range(4):
+        for j in range(4):
             v = corr[i, j]
             v_norm = (v - (-1)) / (1 - (-1))
             r, g, b, _ = _cmap(v_norm)
@@ -1609,8 +1745,8 @@ def fig_orthogonality(out: io.StringIO) -> None:
             ax.text(j, i, sym, ha="center", va="center",
                     fontsize=11, color=text_colour, fontweight="700")
 
-    ax.set_xticks([0, 1, 2])
-    ax.set_yticks([0, 1, 2])
+    ax.set_xticks([0, 1, 2, 3])
+    ax.set_yticks([0, 1, 2, 3])
     ax.set_xticklabels(labels, fontsize=9)
     ax.set_yticklabels(labels, fontsize=9)
     ax.set_title("Ortogonalidade entre Eixos Semânticos (Pearson r)", fontsize=12,
@@ -1627,7 +1763,7 @@ def fig_orthogonality(out: io.StringIO) -> None:
 
     fig.tight_layout()
     _embed(out, fig,
-            "Fig 11 — Matriz de correlação (Pearson r) entre os três eixos semânticos (E, N, R). "
+            "Fig 11 — Matriz de correlação (Pearson r) entre os quatro eixos semânticos (E, G, N, R). "
             "Azul = ortogonal; vermelho = correlação. Pares dentro do limiar |r| < 0.40.",
             "fig09")
 
@@ -2018,6 +2154,7 @@ def _write_prisma(out: io.StringIO) -> None:
 def _load_focal_corpus() -> pd.DataFrame:
     """Return axis_scores_enriched filtered to C3+C4 with numeric citations."""
     df = pd.read_csv(IND / "axis_scores_enriched.csv")
+    df["cluster"] = pd.to_numeric(df["cluster"], errors="coerce")
     df["cited_by_count"] = pd.to_numeric(df["cited_by_count"], errors="coerce").fillna(0)
     return df[df["cluster"].isin([3, 4])].copy()
 
@@ -2051,6 +2188,20 @@ def fig_focal_emergence(out: io.StringIO) -> None:
     n_pre23 = sum(v for y, v in focal_by_yr.items() if y < 2023)
     n_2023  = focal_by_yr.get(2023, 0)
     n_2025  = focal_by_yr.get(2025, 0)
+
+    if n_focal == 0:
+        _callout(out, "read",
+                 "Nesta execução, o recorte focal C3+C4 veio vazio em axis_scores_enriched.csv. "
+                 "A figura é mantida como marcador para preservar a sequência do relatório.")
+        _embed_placeholder(
+            out,
+            "Sem artigos no corpus focal C3+C4 nesta execução",
+            "O arquivo axis_scores_enriched.csv atual contém apenas clusters fora do recorte focal.\n"
+            "Quando C3/C4 voltarem a existir, esta figura retorna automaticamente ao gráfico completo.",
+            "Fig 14 — Emergência do corpus focal (C3+C4). Painel indisponível nesta execução porque o recorte focal está vazio.",
+            "fig13",
+        )
+        return
 
     _callout(out, "read",
              f"Apenas {n_pre23} artigos focais foram publicados em 2020–2022 "
@@ -2167,6 +2318,20 @@ def fig_focal_themes(out: io.StringIO) -> None:
 
     df = _load_focal_corpus()
     years = sorted([int(y) for y in df["publication_year"].dropna().unique() if 2022 <= y <= 2026])
+
+    if df.empty or not years:
+        _callout(out, "read",
+                 "O recorte focal C3+C4 está vazio nesta execução; a seção é preservada apenas "
+                 "como marcador de posição para não deslocar a numeração das figuras.")
+        _embed_placeholder(
+            out,
+            "Sem série temporal temática para o corpus focal",
+            "Não há artigos C3+C4 disponíveis no arquivo axis_scores_enriched.csv desta execução.\n"
+            "Assim que o recorte focal reaparecer, o gráfico volta a ser gerado automaticamente.",
+            "Fig 15 — Composição temática do corpus focal C3+C4 por ano (2022–2026). Painel indisponível nesta execução porque o recorte focal está vazio.",
+            "fig14",
+        )
+        return
 
     CAT_ORDER  = ["integrity_governance", "research_workflow", "research_writing", "other_relevant"]
     CAT_LABELS = {
@@ -2296,6 +2461,20 @@ def fig_focal_citation_maturity(out: io.StringIO) -> None:
     df = _load_focal_corpus()
     all_years = sorted([int(y) for y in df["publication_year"].dropna().unique() if 2020 <= y <= 2026])
 
+    if df.empty or not all_years:
+        _callout(out, "read",
+                 "O corpus focal C3+C4 está vazio nesta execução; a figura de maturidade de citações "
+                 "fica como marcador para manter a sequência do relatório intacta.")
+        _embed_placeholder(
+            out,
+            "Sem coortes para medir maturidade de citações no corpus focal",
+            "O arquivo axis_scores_enriched.csv atual não traz artigos C3+C4.\n"
+            "Sem esse recorte, não há coortes focais para boxplots de citação.",
+            "Fig 16 — Boxplots de citações por coorte anual no corpus focal C3+C4 (2020–2026). Painel indisponível nesta execução porque o recorte focal está vazio.",
+            "fig15",
+        )
+        return
+
     cohort_data = {y: df[df["publication_year"] == y]["cited_by_count"].values for y in all_years}
     pct_cited   = {y: 100 * (cohort_data[y] > 0).mean() for y in all_years}
     medians     = {y: float(np.median(cohort_data[y])) for y in all_years}
@@ -2412,6 +2591,20 @@ def fig_focal_journals(out: io.StringIO) -> None:
     # Focal journals — derive from corpus_clustered.csv (run dir) + cluster filter
     focal_df = _load_focal_corpus()
     focal_ids = set(focal_df["id"])
+
+    if focal_df.empty:
+        _callout(out, "read",
+                 "O recorte focal C3+C4 está vazio nesta execução; a comparação de periódicos do corpus focal "
+                 "fica registrada como placeholder para preservar a ordem das figuras.")
+        _embed_placeholder(
+            out,
+            "Sem periódicos para o corpus focal C3+C4 nesta execução",
+            "O arquivo axis_scores_enriched.csv atual não contém artigos C3/C4, então não há núcleo editorial focal para comparar.\n"
+            "A figura completa volta automaticamente quando o recorte focal reaparecer.",
+            "Fig 17 — Top 12 periódicos por N artigos: esquerdo = corpus focal C3+C4; direito = corpus completo. Painel focal indisponível nesta execução porque o recorte focal está vazio.",
+            "fig16",
+        )
+        return
 
     cc = pd.read_csv(ROOT / "corpus_clustered.csv", usecols=["id", "journal", "cited_by_count"])
     cc["cited_by_count"] = pd.to_numeric(cc["cited_by_count"], errors="coerce").fillna(0)
@@ -2723,7 +2916,7 @@ def fig_claim_chatgpt_reversal(out: io.StringIO) -> None:
              "Padrão consistente com paradoxo de Simpson: artigos fundadores (2020-2022) acumularam "
              "citações antes que o rótulo ChatGPT existisse, inflando artificialmente o agregado.")
 
-    fig, ax = plt.subplots(figsize=(9.5, 5))
+    fig, ax = plt.subplots(figsize=(11.2, 6.1) if LIGHT else (9.5, 5))
 
     y = np.arange(len(labels))
 
@@ -2741,7 +2934,7 @@ def fig_claim_chatgpt_reversal(out: io.StringIO) -> None:
     size_band = 75
     sizes = [size_agg if i == 0 else size_band for i in range(len(labels))]
     for yi, (re, rr, size) in enumerate(zip(rho_e, rho_r, sizes)):
-        marker_fs = 10.5 if yi == 0 else 9.8
+        marker_fs = _article_size(10.8 if yi == 0 else 10.1)
         ax.text(re, yi, "E", ha="center", va="center", fontsize=marker_fs,
                 color="white", fontweight="900", zorder=5,
                 bbox=dict(boxstyle="circle,pad=0.28", facecolor=C_PALETTE[1],
@@ -2763,7 +2956,7 @@ def fig_claim_chatgpt_reversal(out: io.StringIO) -> None:
             textcoords="offset points",
             ha=("right" if e_left else "left"),
             va="center",
-            fontsize=8.1,
+            fontsize=_article_size(8.6),
             color=C_PALETTE[1],
             fontweight="700",
             zorder=6,
@@ -2775,7 +2968,7 @@ def fig_claim_chatgpt_reversal(out: io.StringIO) -> None:
             textcoords="offset points",
             ha=("right" if r_left else "left"),
             va="center",
-            fontsize=8.1,
+            fontsize=_article_size(8.6),
             color=ACCENT,
             fontweight="700",
             zorder=6,
@@ -2783,23 +2976,24 @@ def fig_claim_chatgpt_reversal(out: io.StringIO) -> None:
 
     # Zero line and label
     ax.axvline(0, color=SPINE, lw=1.5, ls="--", alpha=0.75, zorder=1)
-    ax.text(0.002, len(labels) - 0.55, "ρ = 0", fontsize=8, color=SUBTEXT, va="top", fontstyle="italic")
+    ax.text(0.002, len(labels) - 0.55, "ρ = 0", fontsize=_article_size(8.4), color=SUBTEXT, va="top", fontstyle="italic")
 
     # Aggregate vs band separator
     ax.axhline(0.5, color=EDGE, lw=1.0, ls=":", alpha=0.7)
-    ax.text(x_range * 0.92, 0.5, "  ↑ agregado   ↓ por coorte", fontsize=7.5,
+    ax.text(x_range * 0.92, 0.5, "  ↑ agregado   ↓ por coorte", fontsize=_article_size(8.0),
             color=SUBTEXT, va="bottom", ha="right", fontstyle="italic")
 
     ax.set_yticks(y)
-    ax.set_yticklabels(labels, fontsize=10.5)
+    ax.set_yticklabels(labels, fontsize=_article_size(11.0))
     ax.invert_yaxis()
     ax.set_xlabel("Correlação de Spearman ρ com citações", color=TEXT, labelpad=10)
     ax.set_xlim(-x_range, x_range)
     ax.set_title(
         "Reversão do Sinal de Framing (Eixo E) por Coorte — Paradoxo de Simpson\n"
         f"ρE positivo no agregado, negativo em {e_reverses}/3 coortes · ρR estável (positivo em {r_stable}/3)",
-        fontsize=11, fontweight="700", color=TEXT, pad=14,
+        fontsize=_article_size(11.6), fontweight="700", color=TEXT, pad=14,
     )
+    ax.tick_params(axis="x", labelsize=_article_size(9.6))
     ax.grid(axis="x", alpha=0.35)
     ax.set_axisbelow(True)
 
@@ -3089,19 +3283,46 @@ def fig_claim_two_ecosystems(out: io.StringIO) -> None:
     core_plot  = core_top.head(12)
     focal_plot = focal_top.head(12)
 
-    _callout(out, "read",
-             f"{len(overlap)} periódicos em comum nos top-15 de cada subcorpus "
-             f"(Jaccard = {jaccard:.2f}). "
-             + (
-                 f"Sobreposição: {', '.join(sorted(overlap))}."
-                 if overlap else
-                 "Sem sobreposição — ecossistemas completamente disjuntos."
-             ))
+    if focal_plot.empty:
+        _callout(out, "read",
+                 "Nesta execução, o subcorpus focal C3+C4 está vazio no arquivo axis_scores_enriched.csv. "
+                 "O painel da direita é mantido como estado vazio para preservar a sequência do relatório.")
+    else:
+        _callout(out, "read",
+                 f"{len(overlap)} periódicos em comum nos top-15 de cada subcorpus "
+                 f"(Jaccard = {jaccard:.2f}). "
+                 + (
+                     f"Sobreposição: {', '.join(sorted(overlap))}."
+                     if overlap else
+                     "Sem sobreposição — ecossistemas completamente disjuntos."
+                 ))
 
     fig, (ax_c, ax_f) = plt.subplots(1, 2, figsize=(16, 6.5))
 
     def plot_side(ax: plt.Axes, jrn: pd.Series, title: str, col_main: str,
                   overl: set[str]) -> None:
+        ax.set_facecolor(AX_BG)
+        ax.set_xlabel("N artigos no subcorpus", color=TEXT, labelpad=8)
+        ax.set_title(title, fontsize=11, fontweight="700", color=TEXT, pad=12)
+        ax.grid(axis="x", alpha=0.35)
+        ax.set_axisbelow(True)
+        ax.spines["left"].set_visible(False)
+        ax.tick_params(axis="y", length=0)
+        ax.tick_params(colors=TEXT, labelsize=8.5)
+        for sp in ax.spines.values():
+            sp.set_edgecolor(EDGE)
+        if jrn.empty:
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.text(0.5, 0.58, "Sem periódicos neste subcorpus",
+                transform=ax.transAxes, ha="center", va="center",
+                fontsize=10.5, fontweight="700", color=TEXT)
+            ax.text(0.5, 0.40,
+                "O recorte focal C3+C4 está vazio nesta execução,\n"
+                "então não há ranking editorial para comparar.",
+                transform=ax.transAxes, ha="center", va="center",
+                fontsize=8.5, color=SUBTEXT, linespacing=1.45)
+            return
         jrn_asc = jrn[::-1]  # ascending order for hbar (bottom = largest)
         colours = [RED if j in overl else col_main for j in jrn_asc.index]
         y = np.arange(len(jrn_asc))
@@ -3112,13 +3333,7 @@ def fig_claim_two_ecosystems(out: io.StringIO) -> None:
                     f"{int(n)}", va="center", fontsize=8.5, color=TEXT)
         ax.set_yticks(y)
         ax.set_yticklabels([shorten(j) for j in jrn_asc.index], fontsize=8.5)
-        ax.set_xlabel("N artigos no subcorpus", color=TEXT, labelpad=8)
         ax.set_xlim(0, jrn.max() * 1.38)
-        ax.set_title(title, fontsize=11, fontweight="700", color=TEXT, pad=12)
-        ax.grid(axis="x", alpha=0.35)
-        ax.set_axisbelow(True)
-        ax.spines["left"].set_visible(False)
-        ax.tick_params(axis="y", length=0)
         # Overlap legend
         if overl:
             ax.axhline(-1, color=RED, lw=3, label="Em ambos os subcorpus")
@@ -3135,12 +3350,20 @@ def fig_claim_two_ecosystems(out: io.StringIO) -> None:
         fontsize=12, fontweight="700", color=TEXT, y=1.02,
     )
     fig.tight_layout()
-    _embed(out, fig,
+    if focal_plot.empty:
+        caption = (
+            "Fig 21 — Comparação dos 12 periódicos mais produtivos entre corpus técnico-clínico (C0+C1+C2) "
+            "e campo focal (C3+C4). Nesta execução, o painel focal está vazio porque o recorte C3+C4 "
+            "não aparece em axis_scores_enriched.csv."
+        )
+    else:
+        caption = (
             f"Fig 21 — Comparação dos 12 periódicos mais produtivos entre corpus técnico-clínico (C0+C1+C2) "
-           f"e campo focal (C3+C4). Vermelho = presença nos dois; Jaccard top-15 = {jaccard:.2f}. "
-           "O corpus focal publica em periódicos de educação, ética e computação educacional; "
-           "o técnico-clínico concentra-se em engenharia, biomédica e periódicos de amplo alcance.",
-           "fig20")
+            f"e campo focal (C3+C4). Vermelho = presença nos dois; Jaccard top-15 = {jaccard:.2f}. "
+            "O corpus focal publica em periódicos de educação, ética e computação educacional; "
+            "o técnico-clínico concentra-se em engenharia, biomédica e periódicos de amplo alcance."
+        )
+    _embed(out, fig, caption, "fig20")
 
 
 def fig_lotka(out: io.StringIO) -> None:
@@ -3418,7 +3641,7 @@ def main() -> None:
     fig_bradford(out)
     print("  Fig 6  UMAP…")
     fig_umap(out)
-    print("  Fig 7  scatter E×N…")
+    print("  Fig 7  scatter G×E…")
     fig_scatter_ea(out)
     print("  Fig 8  axis E × citations…")
     fig_axis_e_citations(out)

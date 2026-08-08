@@ -1,0 +1,22 @@
+# SHA-256 manifest for the frozen broad-corpus v14 run.
+# Format: SHA256  size_in_bytes  relative_path
+# The referenced data remain local and are ignored by Git.
+d931edd258093a02bef22a74f5f7b1f011d21cc764cc6f963c83c9823e6dfeb3  14559097  runs/academic_production_v14/corpus.csv
+4f14c6636c643be5b02ec3a4c641b143a64160db88b77ff4b9451486cbb37ffb  14384725  runs/academic_production_v14/corpus_clean.csv
+2c175a623c35f099786539b913ea7cd05da9b6410202491b00f5e7cde06ff4de  13992468  runs/academic_production_v14/corpus_clustered.csv
+683bb66d25d6a41e26bfd5c3e4ac967c263ea4796507e5956b2bd2be52fb7447  25645184  runs/academic_production_v14/embeddings_bgem3.npy
+ef7e9b8417865ad855c3ebe7f9f1a369f8d6960eda0f09cec9ec502fc0730301    940307  runs/academic_production_v14/embeddings_bgem3_index.csv
+3c7b325e2aa2e834b6cc49722d8e3c168263b63bcd4301e86c884ea490921c35       286  runs/academic_production_v14/embeddings_bgem3_meta.json
+7443d8974679f73c85d20c53fdf71f07ad5ca9ab0ad7e46d5dbff911768f17e0      1363  runs/academic_production_v14/fetch_log.json
+6aede28c7dbeb33c203aeee689451582b8b306494355da43c5d542a12734a967   1255857  runs/academic_production_v14/indicators/axis_scores.csv
+b2edb17053e96f2479321e3462c1deb17685511ba03999e6b14cf80d23a71274      1033  runs/academic_production_v14/indicators/axis_validation.txt
+d7d08c8833fc5c532e200b42eefc58e0e4d76d0ae652de06db7a233e6af352c5      6280  runs/academic_production_v14/indicators/report_summary.json
+5470ee601e8fc76f5e1b8a9eeda609915465428a8f7a081e9de2993e9e41c2de     84362  runs/academic_production_v14/NOTES/report_text.md
+
+# Analysis-code snapshot, recorded before the Latin.Science rewrite.
+b5f2f23251c1b68a77d4dd59ba84dd2e1b448c13b3709781a2de961c6c46e5a1     20954  bibliometry_pipeline/config.py
+7ee1e991e30994a4d0f9b1bcc2534aa843f4c869154fa641eb733cdbc9a0e928     15661  bibliometry_pipeline/semantic_axes.py
+21c6a52e568d75e8b2e2b6475aae434b12f1ba0af8ff8556561f23000c169b23     17616  bibliometry_pipeline/analyses.py
+9f080060dfeb4e334d30ee55fc9e90f823302a1fcf22bfa129b22e295c1756f2     10916  bibliometry_pipeline/report_summary.py
+ec0000c3f0c8474bc43eb0c3eff73be0d62e657bc8844c9fd14c51ca9bb3c970     93648  bibliometry_pipeline/report_text.py
+d9f3e89465f009e5786077cff2116f68f30ee67a9f77f7139cf5c61e30a044f7    187558  visualizations.py
