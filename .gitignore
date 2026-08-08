@@ -29,6 +29,9 @@ Desktop.ini
 .DS_Store
 .idea/
 
+# Local temporary probes and rendered inspection artifacts
+.tmp*
+
 # Generated bibliometry pipeline artifacts
 corpus.csv
 corpus_clean.csv
