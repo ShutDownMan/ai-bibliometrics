@@ -70,5 +70,21 @@ NOTES/images/*
 *.tex
 *.bib
 
+# Tracked Latin.Science manuscript source (all other TeX artifacts remain local)
+!paper/latinscience2026/manuscript/*.tex
+
+# Public, reviewed camera-ready PDF and the three vector figure inputs.
+!paper/latinscience2026/manuscript/main.pdf
+!paper/latinscience2026/manuscript/fig1_temporal_production_and_distributions.pdf
+!paper/latinscience2026/manuscript/fig2_t_vs_g_scatter.pdf
+!paper/latinscience2026/manuscript/fig4_semantic_axis_instrument.pdf
+
+# Local submission bundles, historical ZIPs, and private crosswalk materials.
+/paper/latinscience2026/submission_artifacts/
+/paper/latinscience2026/submission_package/
+/paper/latinscience2026/submission_supplement/
+/paper/latinscience2026/submission_supplement_clean/
 
 
+# CocoIndex Code (ccc)
+/.cocoindex_code/

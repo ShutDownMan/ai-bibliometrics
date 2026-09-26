@@ -65,3 +65,22 @@ validation is a planned confirmatory component, not a result.
 | Date | Change | Rationale |
 |---|---|---|
 | 2026-08-08 | narrowed broad v14 corpus through recorded screening rules | original broad corpus was materially out of scope |
+
+
+## Publication amendment (September 2026)
+
+The final paper reports the first three research questions. The exploratory
+citation question is omitted because provider/merge/snapshot provenance is
+unresolved and citations do not support the conclusions. This is a reduction
+of reported scope, not a claim that the original plan lacked the question.
+
+The corpus and final anchors remain frozen. The existing human ratings on
+129 complete paired records are matched to the final document scores through
+the original crosswalk; the sample and ratings are not recollected or altered.
+Validation summaries and bootstrap intervals are recalculated for that final
+configuration. Unweighted correlations describe the stratified sample.
+
+Temporal summaries use completed 2020-2025 calendar-year cohorts and descriptive
+2026 context. The principal association includes all 711 records and is checked
+against models excluding 2026 and restricted to 2023-2025. All reported outputs
+are mapped to the final release in S10 and reproduced in S11.

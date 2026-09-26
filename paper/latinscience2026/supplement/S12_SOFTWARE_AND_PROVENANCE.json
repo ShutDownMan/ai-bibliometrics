@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-09-26T20:36:16.720646+00:00",
+  "purpose": "final statistical reproduction; these versions do not establish the historical embedding runtime",
+  "packages": {
+    "numpy": "1.26.4",
+    "pandas": "2.2.3",
+    "scipy": "1.15.1",
+    "matplotlib": "3.10.8",
+    "openpyxl": "3.1.5",
+    "sentence-transformers": "3.3.1",
+    "transformers": "4.57.6",
+    "torch": "2.10.0+cu128"
+  },
+  "cached_checkpoint_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+  "historical_runtime_note": "Acquisition-time software versions and per-record retrieval timestamps were not recorded."
+}

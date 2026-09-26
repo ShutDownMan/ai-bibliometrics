@@ -1,41 +1,57 @@
-# Latin.Science 2026 article workspace
+# Latin.Science 2026 paper and research materials
 
-This directory is the tracked source of truth for the full-paper rewrite. Large
-data and generated artifacts remain local under `runs/latin_science_2026/`.
+## Public publication files
 
-## Current article direction
+The camera-ready manuscript and its supporting research materials are browsable
+as individual files in the versioned [Latin.Science 2026 release](https://github.com/ShutDownMan/ai-bibliometrics/tree/latinscience2026-v1.0.0/paper/latinscience2026).
 
-**Working title:** *From Generic AI to Named Models and Institutional
-Guardrails: A Bibliometric Map of AI in Scholarly Communication and Research
-Workflows, 2020–2026.*
+- [Final PDF](manuscript/main.pdf)
+- [LaTeX source](manuscript/main.tex)
+- [Supplement index](supplement/README.md)
+- [Derived analysis data](supplement/S8_DERIVED_ANALYSIS_DATA.csv)
+- [Validation data](supplement/S9_VALIDATION_SCORES.csv)
+- [Reproduction manifest](supplement/S10_REPRODUCTION_MANIFEST.md)
+- [Citation metadata](CITATION.cff)
 
-The paper maps AI used **for scholarly communication and research workflows**:
-scientific writing, publishing, peer review, integrity, evidence-synthesis
-automation, and higher-education governance. It does not claim to map AI
-research generally, clinical AI, or education technology generally.
+The released tables and scripts reproduce the published statistics and figures.
+The original database records, document embeddings, screening ledger, rater
+workbooks, identities, and private form-to-record crosswalk are not included.
+Recomputing the document scores requires preserved source inputs that are not
+redistributed under the applicable access terms. The S9 validation file uses
+release-specific record IDs and contains no form IDs.
 
-## Directory map
+## Reproduce the reported statistics and figures
 
-| Location | Purpose | Git policy |
-|---|---|---|
-| `protocol.md` | frozen scope, questions and analysis commitments | tracked |
-| `CURRENT_DATA.md` | current facts, artifact map and data decisions | tracked |
-| `data/` | documentation for the local analytical dataset | tracked docs only |
-| `validation/` | validation procedure and returned-ratings conventions | tracked docs only during blind review |
-| `manuscript/` | paper source, figures selected for submission and references | tracked |
-| `development/` | rule-development/audit documentation | tracked |
-| `runs/latin_science_2026/` | screened corpus, scores, samples and outputs | local / ignored |
-| `archive/broad_ai_corpus_v14/` | frozen broad predecessor study | tracked manifest; data local |
+From the repository root, install the dependencies listed in
+`paper/latinscience2026/supplement/requirements-statistics.txt`, then run:
 
-## Operating rules
+```text
+python paper/latinscience2026/supplement/reproduce.py --check
+python paper/latinscience2026/supplement/figures.py --package paper/latinscience2026/supplement --output-dir reproduced_figures
+```
 
-1. Do not edit or move the v14 archive or current run artifacts merely to make
-   the tree look cleaner.
-2. The final analytical population is the 711 records with `decision=include`.
-   The eight `needs_review` records are excluded from every result until manually
-   adjudicated.
-3. Every manuscript table/figure must name its local input artifact and the run
-   date in its caption or supplementary manifest.
-4. Only code, protocol, manuscript source and lightweight documentation belong
-   on GitHub. Corpora, raw exports, ratings workbooks and PDFs stay local until
-   an intentional de-identified release is prepared.
+The first command checks the reported estimates against the released derived
+tables. The second regenerates the three figures from those tables. Neither
+command needs the local corpus, raw database exports, or document embeddings.
+
+To rebuild the PDF, use pdfLaTeX twice from `paper/latinscience2026/manuscript/`:
+
+```text
+pdflatex -interaction=nonstopmode -halt-on-error main.tex
+pdflatex -interaction=nonstopmode -halt-on-error main.tex
+```
+
+## Repository layout
+
+| Path | Purpose |
+|---|---|
+| `manuscript/` | Camera-ready PDF, LaTeX source, template files, and figure assets |
+| `supplement/` | Individually browsable protocols, derived data, code, and checksums |
+| `protocol.md` | Study scope and analysis commitments |
+| `CURRENT_DATA.md` | Publication status and clearly marked historical working notes |
+| `data/`, `validation/`, `development/` | Study documentation |
+| `runs/latin_science_2026/` | Private working inputs and analysis outputs; ignored by Git |
+| `submission_artifacts/` | JEMS upload bundles and historical files; ignored by Git |
+
+The optional submission ZIPs are retained locally for portal workflows. The
+repository release is the public access point for researchers.

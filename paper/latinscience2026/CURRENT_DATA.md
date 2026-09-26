@@ -1,4 +1,17 @@
-# Current data status — 2026-08-08
+# Publication status (September 2026)
+
+The final manuscript is `manuscript/main.tex` and the publication supplement is
+`supplement/`. The frozen corpus remains N=711. Validation uses the same
+129 human-rating pairs matched to final scores: Spearman rho=0.755 for T and
+0.623 for G. The principal coefficient remains 0.206. `S11_PUBLICATION_RESULTS.json`
+and `S10_REPRODUCTION_MANIFEST.md` in the public supplement are the current results
+and artifact map. Citation analysis is omitted from the publication. The August
+status below is retained as historical context.
+
+## Historical working notes from 2026-08-08
+
+The following notes predate the final human-validation analysis. Use the public
+`supplement/` files and the publication landing page for current results.
 
 ## Use this dataset for the manuscript draft
 
@@ -28,6 +41,13 @@ manual adjudication.
 
 ## Corpus snapshot
 
+The publication year in this table is not a record-capture date. Local broad
+corpus-processing artifacts and manual exports are dated 10--11 April 2026;
+focused screening, scoring, and initial statistics were produced on 8 August
+2026. Per-record retrieval timestamps and complete source-query logs were not
+retained, so this is an April 2026 project snapshot, not a continuously updated
+or precisely time-stamped census. See `supplement/S1_SEARCH_AND_CORPUS.md`.
+
 | Year | Included records |
 |---:|---:|
 | 2020 | 4 |
@@ -40,6 +60,16 @@ manual adjudication.
 
 The very small pre-2023 base means a pre/post descriptive comparison is more
 defensible than a claim of smooth linear growth in a semantic score.
+
+## Cohort-first outputs
+
+`indicators/cohort_descriptives.csv` is the current temporal reporting table.
+It provides medians, IQRs, and 10,000-resample bootstrap confidence intervals
+for 2020--2022, 2023, 2024, 2025, and provisional 2026. The 2026 cohort is
+descriptive only. `indicators/cohort_sensitivity_results.json` contains the
+pre-specified T--G robustness models, including the 2023--2025 categorical-year
+model. The earlier binary pre-2023/2023+ result remains an archived diagnostic,
+not the intended main temporal result.
 
 ## Data actions, in order
 

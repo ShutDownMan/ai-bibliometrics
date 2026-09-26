@@ -1,0 +1,164 @@
+{
+  "corpus_n": 711,
+  "snapshot": "locally preserved April 2026 multi-source snapshot",
+  "principal": {
+    "n": 711,
+    "year_adjustment": "continuous",
+    "beta_t": 0.20621128418183704,
+    "beta_t_ci_95": [
+      0.11906653138473126,
+      0.2996579827232737
+    ],
+    "partial_r": 0.1645106324683326,
+    "partial_p": 1.0536993877605899e-05,
+    "partial_test_df": 708,
+    "r_squared": 0.027710400826051695,
+    "r_squared_year_only": 0.0006646402883243585,
+    "f_squared_t": 0.027816568809031033,
+    "bootstrap_resamples": 2000,
+    "bootstrap_seed": 42
+  },
+  "sensitivity_excluding_2026": {
+    "n": 629,
+    "year_adjustment": "continuous",
+    "beta_t": 0.23365146548927046,
+    "beta_t_ci_95": [
+      0.1398556921171449,
+      0.3241735727216087
+    ],
+    "partial_r": 0.18532909338339085,
+    "partial_p": 2.9303170351978497e-06,
+    "partial_test_df": 626,
+    "r_squared": 0.040237267254200404,
+    "r_squared_year_only": 0.0060999071346681255,
+    "f_squared_t": 0.03556854100999337,
+    "bootstrap_resamples": 2000,
+    "bootstrap_seed": 20260808
+  },
+  "sensitivity_2023_2025": {
+    "n": 609,
+    "year_adjustment": "categorical",
+    "beta_t": 0.1874432340365907,
+    "beta_t_ci_95": [
+      0.09510866201139721,
+      0.2835298381436058
+    ],
+    "partial_r": 0.14970027919207762,
+    "partial_p": 0.0002143314900355574,
+    "partial_test_df": 605,
+    "r_squared": 0.02972448560704588,
+    "r_squared_year_only": 0.007481984590328339,
+    "f_squared_t": 0.022923902218261585,
+    "bootstrap_resamples": 2000,
+    "bootstrap_seed": 20260808
+  },
+  "validation": {
+    "n": 129,
+    "bootstrap_resamples": 10000,
+    "bootstrap_seed": 20260810,
+    "T": {
+      "inter_rater": {
+        "spearman_rho": 0.7550141374784984,
+        "p": 4.909064205769652e-25,
+        "spearman_ci_95": [
+          0.6592686855916515,
+          0.8341996963748848
+        ],
+        "pearson_r": 0.7500068890371094,
+        "quadratic_weighted_kappa": 0.631124735947241
+      },
+      "human_automated": {
+        "spearman_rho": 0.7545951944901453,
+        "p": 5.392237207692309e-25,
+        "spearman_ci_95": [
+          0.6632948139746243,
+          0.8205079666656556
+        ],
+        "pearson_r": 0.7754956826521809
+      },
+      "per_rater_spearman": {
+        "a": 0.6068801407074178,
+        "b": 0.782953001583051
+      },
+      "quintiles": [
+        {
+          "quintile": 1,
+          "n": 26,
+          "mean_human": 1.7307692307692308
+        },
+        {
+          "quintile": 2,
+          "n": 26,
+          "mean_human": 1.7884615384615385
+        },
+        {
+          "quintile": 3,
+          "n": 25,
+          "mean_human": 2.76
+        },
+        {
+          "quintile": 4,
+          "n": 26,
+          "mean_human": 3.5576923076923075
+        },
+        {
+          "quintile": 5,
+          "n": 26,
+          "mean_human": 4.346153846153846
+        }
+      ]
+    },
+    "G": {
+      "inter_rater": {
+        "spearman_rho": 0.8062753527752717,
+        "p": 9.614505437132092e-31,
+        "spearman_ci_95": [
+          0.721624475732931,
+          0.8713839326580326
+        ],
+        "pearson_r": 0.8232536082417042,
+        "quadratic_weighted_kappa": 0.8045715813393931
+      },
+      "human_automated": {
+        "spearman_rho": 0.6228571947365874,
+        "p": 3.2400648485724516e-15,
+        "spearman_ci_95": [
+          0.4904787853483027,
+          0.7321064031493648
+        ],
+        "pearson_r": 0.6444546535537522
+      },
+      "per_rater_spearman": {
+        "a": 0.51613589168921,
+        "b": 0.6557820276754138
+      },
+      "quintiles": [
+        {
+          "quintile": 1,
+          "n": 26,
+          "mean_human": 1.4230769230769231
+        },
+        {
+          "quintile": 2,
+          "n": 26,
+          "mean_human": 3.326923076923077
+        },
+        {
+          "quintile": 3,
+          "n": 25,
+          "mean_human": 3.26
+        },
+        {
+          "quintile": 4,
+          "n": 26,
+          "mean_human": 4.1923076923076925
+        },
+        {
+          "quintile": 5,
+          "n": 26,
+          "mean_human": 4.384615384615385
+        }
+      ]
+    }
+  }
+}
