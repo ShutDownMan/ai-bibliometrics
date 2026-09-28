@@ -3,7 +3,7 @@
 ## Public publication files
 
 The camera-ready manuscript and its supporting research materials are browsable
-as individual files in the versioned [Latin.Science 2026 release](https://github.com/ShutDownMan/ai-bibliometrics/releases/tag/latinscience2026-v1.0.2).
+as individual files in the [GitHub repository](https://github.com/ShutDownMan/ai-bibliometrics), under `paper/latinscience2026/`.
 
 - [Final PDF](manuscript/main.pdf)
 - [LaTeX source](manuscript/main.tex)
